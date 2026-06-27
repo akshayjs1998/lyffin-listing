@@ -1,4 +1,5 @@
-const CACHE = 'lyffin-listing-v1782390060';
+// cache bust: 1782585951
+const CACHE = '';
 const FILES = [
   '/lyffin-listing/index.html',
   '/lyffin-listing/manifest.json',

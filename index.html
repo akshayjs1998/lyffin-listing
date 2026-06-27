@@ -603,6 +603,14 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#111;background:#fff;}
 .sn{font-size:24px;font-weight:700;}
 .sl{font-size:9px;color:#888;text-transform:uppercase;}
 
+@media(max-width:600px){
+  #products-layout{grid-template-columns:1fr!important;}
+  .detail{display:none;position:fixed;inset:0;z-index:200;overflow-y:auto;border-radius:0!important;border:none!important;max-height:100vh!important;padding:1rem!important;}
+  .detail.mobile-open{display:block!important;}
+  #detail-close-btn{display:block!important;}
+  .tbl th:nth-child(7),.tbl th:nth-child(8),.tbl th:nth-child(9),.tbl th:nth-child(10){display:none}
+  .tbl td:nth-child(7),.tbl td:nth-child(8),.tbl td:nth-child(9),.tbl td:nth-child(10){display:none}
+}
 @media print{
   body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .pg{border:none;}
@@ -736,7 +744,7 @@ function renderProjectInto(c){
 function renderProducts(){const c=document.getElementById("page-content");if(c)renderProductsInto(c);}
 function renderProductsInto(c){
   c.innerHTML=`
-<div style="display:grid;grid-template-columns:1fr 320px;gap:12px;">
+<div id="products-layout" style="display:grid;grid-template-columns:1fr 320px;gap:12px;">
   <div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
       <div style="font-size:14px;font-weight:600;">${products.length} products <span style="font-size:12px;font-weight:400;color:var(--text2);">· ${totalPieces()} pieces</span></div>
@@ -766,7 +774,7 @@ function renderProductsInto(c){
       <button class="btn" onclick="addProduct()">+ Add product</button>
     </div>
   </div>
-  <div class="detail" id="detail-panel">
+  <div class="detail" id="detail-panel"><button id="detail-close-btn" onclick="closeMobileDetail()" style="display:none;width:100%;margin-bottom:12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);font-size:13px;cursor:pointer;color:var(--text2);">← Back to products</button>
     <div style="text-align:center;padding:3rem 1rem;color:var(--text2);">
       <div style="font-size:28px;margin-bottom:8px;opacity:.4;">🖱</div>
       <div style="font-size:13px;">Click a row to edit details</div>
