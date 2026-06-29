@@ -644,7 +644,7 @@ ${productPages}
     <div class="sbox"><div class="sn">${areas.length}</div><div class="sl">Areas</div></div>
   </div>
   <table class="stbl">
-    <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th></tr></thead>
+    <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
     <tbody>${products.slice(0,35).map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||i+1}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${esc(p.dimensions)}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
   </table>
   <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page 1 of ${Math.ceil(products.length/35)}</span></div>
@@ -661,7 +661,7 @@ ${products.length>35?Array.from({length:Math.ceil((products.length-35)/35)},(_,c
     <div style="font-size:9px;color:#666;text-align:right">${date||""} · ${quoteNo||""} · Rev ${revision||"1"}</div>
   </div>
   <table class="stbl">
-    <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th></tr></thead>
+    <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
     <tbody>${chunk.map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||(start+i+1)}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${esc(p.dimensions)}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
   </table>
   <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page ${pageNum} of ${Math.ceil(products.length/35)}</span></div>
