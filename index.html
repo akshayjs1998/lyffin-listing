@@ -437,6 +437,10 @@ function clearAnnotation(){const p=getProd();if(!p||!p.productImage||!annotCanva
 
 function buildPDF(branded=true){
   const{clientName,quoteNo,projectName,date,dueDate,preparedBy,revision}=project;
+  // Format dates from YYYY-MM-DD to DD-MMM-YYYY
+  function fmtDate(d){if(!d)return"";const[y,m,mo]=d.split("-");const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return`${mo}-${months[parseInt(m,10)-1]}-${y}`;}
+  const dueDateFmt=fmtDate(dueDate);
+  const dateFmt=fmtDate(date);
   const areas=[...new Set(products.map(p=>p.area).filter(Boolean))];
   const tot=totalPieces();
 
@@ -502,7 +506,7 @@ function buildPDF(branded=true){
     </div>
     <div class="meta-r">
       <div class="meta-place">Placement: <span>${esc(p.area)||"—"}</span></div>
-      <div class="meta-due">Due Date : <span>${dueDate||"—"}</span></div>
+      <div class="meta-due">Due Date : <span>${dueDateFmt||"—"}</span></div>
       <div class="meta-qty">Quantity: <span>${qty}</span></div>
     </div>
   </div>
@@ -624,7 +628,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#111;background:#fff;}
   <div class="ccl">${esc(clientName)}</div>
   ${quoteNo?`<div class="cdet">Quotation: ${quoteNo}</div>`:""}
   ${projectName?`<div class="cdet">${esc(projectName)}</div>`:""}
-  ${dueDate?`<div class="cdet">Due: ${dueDate}</div>`:""}
+  ${dueDateFmt?`<div class="cdet">Due: ${dueDateFmt}</div>`:""}
   <div class="cdet" style="margin-top:20px;">Revision ${revision||"1"}</div>
   ${preparedBy?`<div class="cdet" style="color:#bbb;">Prepared by ${preparedBy}</div>`:""}
 </div>
@@ -636,7 +640,7 @@ ${productPages}
   <div class="ph">
     ${summaryLogoHtml}
     <div class="ph-mid"><div class="ph-title">Product Summary</div></div>
-    <div style="font-size:9px;color:#666;text-align:right">${date||""} · ${quoteNo||""} · Rev ${revision||"1"}</div>
+    <div style="font-size:9px;color:#666;text-align:right">${dateFmt||""} · ${quoteNo||""} · Rev ${revision||"1"}</div>
   </div>
   <div class="srow">
     <div class="sbox"><div class="sn">${products.length}</div><div class="sl">Products</div></div>
@@ -658,7 +662,7 @@ ${products.length>35?Array.from({length:Math.ceil((products.length-35)/35)},(_,c
   <div class="ph">
     ${summaryLogoHtml}
     <div class="ph-mid"><div class="ph-title">Product Summary <span style="font-weight:400;color:#999;">(continued)</span></div></div>
-    <div style="font-size:9px;color:#666;text-align:right">${date||""} · ${quoteNo||""} · Rev ${revision||"1"}</div>
+    <div style="font-size:9px;color:#666;text-align:right">${dateFmt||""} · ${quoteNo||""} · Rev ${revision||"1"}</div>
   </div>
   <table class="stbl">
     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
