@@ -1280,8 +1280,8 @@ function generatePDF(branded=true){
   try{
     const safeName=(project.clientName||"Client").replace(/[^a-zA-Z0-9 ]/g,"").trim().replace(/\s+/g,"_");
     const rev=(project.revision||"1").replace(/[^a-zA-Z0-9]/g,"");
-    const suffix=branded?"":"_Unbranded";
-    const filename=`Lyffin_X_${safeName}_Factory_Listing_Rev${rev}${suffix}.pdf`;
+    const suffix=branded?"":"_FC";
+    const filename=`Lyffin X ${safeName}_Factory List_Rev${rev}${suffix}.pdf`;
     const html=buildPDF(branded);
 
     // Method 1: try window.open (works in Chrome browser)
