@@ -294,6 +294,7 @@ async function compressSwatch(dataURL){
   });
 }
 function esc(s){return(s||"").toString().replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+function escNL(s){return esc(s).replace(/\n/g,"<br/>");}
 function getProd(){return products.find(p=>p.id===selectedId)||null;}
 function totalPieces(){return products.reduce((s,p)=>s+(parseInt(p.qty)||0),0);}
 function imgDone(){return products.filter(p=>p.productImage).length;}
@@ -518,7 +519,7 @@ function buildPDF(branded=true){
     <div class="specs-grid">
       <div class="specs-left-col">
         <div class="spec-name">${esc(p.name)}</div>
-        <div class="spec-dim">${esc(p.dimensions)}</div>
+        <div class="spec-dim">${escNL(p.dimensions)}</div>
         ${p.material?`<div class="spec-row" style="margin-top:4px;"><span class="spec-key">Material</span><span class="spec-val">${esc(p.material)}</span></div>`:""}
         <div class="spec-section-label">Finish</div>
         ${finishRows}
@@ -649,7 +650,7 @@ ${productPages}
   </div>
   <table class="stbl">
     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
-    <tbody>${products.slice(0,35).map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||i+1}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${esc(p.dimensions)}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
+    <tbody>${products.slice(0,35).map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||i+1}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
   </table>
   <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page 1 of ${Math.ceil(products.length/35)}</span></div>
 </div>
@@ -666,7 +667,7 @@ ${products.length>35?Array.from({length:Math.ceil((products.length-35)/35)},(_,c
   </div>
   <table class="stbl">
     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
-    <tbody>${chunk.map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||(start+i+1)}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${esc(p.dimensions)}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
+    <tbody>${chunk.map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||(start+i+1)}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
   </table>
   <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page ${pageNum} of ${Math.ceil(products.length/35)}</span></div>
 </div>`;}).join(""):""}
@@ -841,7 +842,7 @@ function renderTableRows(){
   <td><input type="text" style="padding:3px 5px;font-size:12px;width:100%;" value="${esc(p.name)}" placeholder="Product name" onclick="event.stopPropagation()" oninput="setField('${p.id}','name',this.value)"/></td>
   <td><input type="number" style="width:36px;padding:3px 4px;font-size:12px;text-align:center;" min="1" value="${p.qty}" onclick="event.stopPropagation()" oninput="setField('${p.id}','qty',parseInt(this.value)||1)"/></td>
   <td><div class="area-wrap"><input type="text" id="area-inp-${p.id}" style="padding:3px 5px;font-size:12px;" value="${esc(p.area)}" placeholder="e.g. Sitout" onclick="event.stopPropagation()" oninput="setField('${p.id}','area',this.value);showAreaSuggestions('${p.id}',this.value)" onblur="hideAreaSuggestions('${p.id}')"/><div id="area-sug-${p.id}" class="area-suggestions" style="display:none;"></div></div></td>
-  <td><input type="text" style="padding:3px 5px;font-size:12px;" value="${esc(p.dimensions)}" placeholder="120 x 60 cm" onclick="event.stopPropagation()" oninput="setField('${p.id}','dimensions',this.value)"/></td>
+  <td><textarea rows="1" style="padding:3px 5px;font-size:12px;width:100%;resize:vertical;font-family:inherit;line-height:1.4;min-height:24px;" placeholder="120 x 60 cm" onclick="event.stopPropagation()" oninput="setField('${p.id}','dimensions',this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'">${esc(p.dimensions)}</textarea></td>
   <td style="text-align:center;">${p.productImage?'<span style="color:var(--success-text);">✓</span>':'<span style="color:var(--danger-text);">✗</span>'}</td>
   <td style="text-align:center;">${p.annotatedImage?'<span style="color:var(--success-text);">✓</span>':'<span style="color:var(--text3);">—</span>'}</td>
   <td style="text-align:center;">${(p.drawings||[]).length>0?`<span style="color:var(--success-text);">${p.drawings.length}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
@@ -1550,7 +1551,7 @@ function buildTagsPDF(){
   </div>
   <div class="tag-spec">
     <div class="tag-spec-row"><span class="tag-spec-lbl">Product Name :</span><span class="tag-spec-val">${esc(p.name)||"—"}</span></div>
-    <div class="tag-spec-row"><span class="tag-spec-lbl">Dimension &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><span class="tag-spec-val">${esc(p.dimensions)||"—"}</span></div>
+    <div class="tag-spec-row"><span class="tag-spec-lbl">Dimension &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><span class="tag-spec-val">${escNL(p.dimensions)||"—"}</span></div>
   </div>
 </div>`).join("");
 
