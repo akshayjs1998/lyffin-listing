@@ -241,7 +241,7 @@ async function importProject(file){
 async function closeProject(){await saveCurrentProject();currentProjectId=null;document.getElementById("save-btn").style.display="none";document.getElementById("close-btn").style.display="none";renderHome();}
 
 function uid(){return"p_"+Math.random().toString(36).slice(2,9);}
-function blank(){return{id:uid(),productNo:"",name:"",qty:1,area:"",dimensions:"",material:"",finishes:[""],upholstery:[],productImage:null,annotatedImage:null,swatchImages:[null,null,null,null],drawings:[]};}
+function blank(){return{id:uid(),productNo:"",name:"",qty:1,area:"",dimensions:"",details:"",material:"",finishes:[""],upholstery:[],productImage:null,annotatedImage:null,swatchImages:[null,null,null,null],drawings:[]};}
 function readFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(f);});}
 
 // Compress image to max 1200px wide/tall, quality 0.82 JPEG — reduces storage by ~70%
@@ -519,7 +519,7 @@ function buildPDF(branded=true){
     <div class="specs-grid">
       <div class="specs-left-col">
         <div class="spec-name">${esc(p.name)}</div>
-        <div class="spec-dim">${escNL(p.dimensions)}</div>
+        <div class="spec-dim">${escNL(p.dimensions)}${p.details?`<br/><span style="font-size:11px;color:#888;font-style:italic;">${escNL(p.details)}</span>`:""}</div>
         ${p.material?`<div class="spec-row" style="margin-top:4px;"><span class="spec-key">Material</span><span class="spec-val">${esc(p.material)}</span></div>`:""}
         <div class="spec-section-label">Finish</div>
         ${finishRows}
@@ -650,7 +650,7 @@ ${productPages}
   </div>
   <table class="stbl">
     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
-    <tbody>${products.slice(0,35).map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||i+1}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
+    <tbody>${products.slice(0,35).map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||i+1}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}${p.details?`<br/><span style="font-size:10px;color:#888;font-style:italic;">${escNL(p.details)}</span>`:""}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
   </table>
   <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page 1 of ${Math.ceil(products.length/35)}</span></div>
 </div>
@@ -667,7 +667,7 @@ ${products.length>35?Array.from({length:Math.ceil((products.length-35)/35)},(_,c
   </div>
   <table class="stbl">
     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
-    <tbody>${chunk.map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||(start+i+1)}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
+    <tbody>${chunk.map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||(start+i+1)}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}${p.details?`<br/><span style="font-size:10px;color:#888;font-style:italic;">${escNL(p.details)}</span>`:""}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
   </table>
   <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page ${pageNum} of ${Math.ceil(products.length/35)}</span></div>
 </div>`;}).join(""):""}
@@ -766,6 +766,7 @@ function renderProductsInto(c){
         <th style="width:44px">Qty</th>
         <th style="min-width:120px">Area / Placement</th>
         <th style="min-width:120px">Dimensions</th>
+        <th style="min-width:120px">Details</th>
         <th style="width:32px">📷</th>
         <th style="width:32px">✏</th>
         <th style="width:32px">📐</th>
@@ -842,7 +843,8 @@ function renderTableRows(){
   <td><input type="text" style="padding:3px 5px;font-size:12px;width:100%;" value="${esc(p.name)}" placeholder="Product name" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=true" oninput="setField('${p.id}','name',this.value)"/></td>
   <td><input type="number" style="width:36px;padding:3px 4px;font-size:12px;text-align:center;" min="1" value="${p.qty}" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=true" oninput="setField('${p.id}','qty',parseInt(this.value)||1)"/></td>
   <td><div class="area-wrap"><input type="text" id="area-inp-${p.id}" style="padding:3px 5px;font-size:12px;" value="${esc(p.area)}" placeholder="e.g. Sitout" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" oninput="setField('${p.id}','area',this.value);showAreaSuggestions('${p.id}',this.value)" onblur="hideAreaSuggestions('${p.id}');this.closest('tr').draggable=true"/><div id="area-sug-${p.id}" class="area-suggestions" style="display:none;"></div></div></td>
-  <td><textarea rows="1" style="padding:3px 5px;font-size:12px;width:100%;resize:vertical;font-family:inherit;line-height:1.4;min-height:24px;" placeholder="120 x 60 cm" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=true" oninput="setField('${p.id}','dimensions',this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'">${esc(p.dimensions)}</textarea></td>
+  <td><input type="text" style="padding:3px 5px;font-size:12px;" value="${esc(p.dimensions)}" placeholder="120 x 60 cm" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=true" oninput="setField('${p.id}','dimensions',this.value)"/></td>
+  <td><input type="text" style="padding:3px 5px;font-size:12px;" value="${esc(p.details)}" placeholder="e.g. Glass top, hinge type" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=true" oninput="setField('${p.id}','details',this.value)"/></td>
   <td style="text-align:center;">${p.productImage?'<span style="color:var(--success-text);">✓</span>':'<span style="color:var(--danger-text);">✗</span>'}</td>
   <td style="text-align:center;">${p.annotatedImage?'<span style="color:var(--success-text);">✓</span>':'<span style="color:var(--text3);">—</span>'}</td>
   <td style="text-align:center;">${(p.drawings||[]).length>0?`<span style="color:var(--success-text);">${p.drawings.length}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
@@ -1551,7 +1553,7 @@ function buildTagsPDF(){
   </div>
   <div class="tag-spec">
     <div class="tag-spec-row"><span class="tag-spec-lbl">Product Name :</span><span class="tag-spec-val">${esc(p.name)||"—"}</span></div>
-    <div class="tag-spec-row"><span class="tag-spec-lbl">Dimension &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><span class="tag-spec-val">${escNL(p.dimensions)||"—"}</span></div>
+    <div class="tag-spec-row"><span class="tag-spec-lbl">Dimension &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span><span class="tag-spec-val">${escNL(p.dimensions)||"—"}${p.details?`<br/><span style="font-size:10px;color:#888;font-style:italic;">${escNL(p.details)}</span>`:""}</span></div>
   </div>
 </div>`).join("");
 
@@ -1714,6 +1716,7 @@ async function pushToOps() {
         qty:          parseInt(p.qty) || 1,
         area:         p.area || '',
         dimensions:   p.dimensions || '',
+        details:      p.details || '',
         finishes:     (p.finishes || []).filter(Boolean),
         upholstery:   (p.upholstery || []).filter(Boolean),
         // Production stages — all start as pending
