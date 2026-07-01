@@ -145,7 +145,7 @@ let db=null;
 let allProjects={};
 let currentProjectId=null;
 let step=0;
-let project={clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:""};
+let project={clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[]};
 let products=[];
 let selectedId=null;
 let usedAreas=[];
@@ -175,7 +175,13 @@ async function saveAllProjects(){
     catch(e){alert("Save error: "+e.message);}
   }
 }
-async function saveCurrentProject(){
+async function showToast(msg){
+  let t=document.getElementById('listing-toast');
+  if(!t){t=document.createElement('div');t.id='listing-toast';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#1a1a18;color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._to);t._to=setTimeout(()=>{t.style.opacity='0';},2200);
+}
+function saveCurrentProject(){
   if(!currentProjectId)return;
   usedAreas=[...new Set(products.map(p=>p.area).filter(Boolean))];
   allProjects[currentProjectId]={id:currentProjectId,name:project.clientName||"Untitled",meta:`${project.quoteNo||""}${project.quoteNo&&project.dueDate?" · ":""}${project.dueDate?"Due: "+project.dueDate:""}`,updatedAt:new Date().toISOString(),project,products,usedAreas};
@@ -188,8 +194,8 @@ function autosaveProject(){
   clearTimeout(_autosaveTimer);
   _autosaveTimer=setTimeout(()=>saveCurrentProject(),600);
 }
-function openProject(id){const p=allProjects[id];if(!p)return;currentProjectId=id;project={...{clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:""},...p.project};products=p.products||[];usedAreas=p.usedAreas||[];selectedId=null;step=0;document.getElementById("save-btn").style.display="inline-flex";document.getElementById("close-btn").style.display="inline-flex";render();}
-function newProject(){currentProjectId="proj_"+Date.now();project={clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:""};products=[blank()];usedAreas=[];selectedId=null;step=0;document.getElementById("save-btn").style.display="inline-flex";document.getElementById("close-btn").style.display="inline-flex";render();}
+function openProject(id){const p=allProjects[id];if(!p)return;currentProjectId=id;project={...{clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[]},...p.project};products=p.products||[];usedAreas=p.usedAreas||[];selectedId=null;step=0;document.getElementById("save-btn").style.display="inline-flex";document.getElementById("close-btn").style.display="inline-flex";render();}
+function newProject(){currentProjectId="proj_"+Date.now();project={clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[]};products=[blank()];usedAreas=[];selectedId=null;step=0;document.getElementById("save-btn").style.display="inline-flex";document.getElementById("close-btn").style.display="inline-flex";render();}
 async function deleteProject(id){if(!confirm("Delete this project permanently?"))return;delete allProjects[id];await dbDelete(id);renderHome();}
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────────────────────
@@ -302,6 +308,68 @@ function uphPending(){return products.filter(p=>!(p.upholstery||[]).some(u=>u)).
 
 function addProduct(){const np=blank();const last=products[products.length-1];if(last){np.productNo=String((parseInt(last.productNo)||0)+1);np.area=last.area;}products.push(np);selectedId=np.id;saveCurrentProject();renderProducts();}
 function delProduct(id){products=products.filter(p=>p.id!==id);if(selectedId===id)selectedId=products.length?products[0].id:null;saveCurrentProject();renderProducts();}
+function duplicateProduct(id) {
+  const src = products.find(x => x.id === id);
+  if (!src) return;
+  const np = JSON.parse(JSON.stringify(src));
+  np.id = uid();
+  np.productNo = String((parseInt(src.productNo)||0) + 1) + ' (copy)';
+  const idx = products.findIndex(x => x.id === id);
+  products.splice(idx + 1, 0, np);
+  selectedId = np.id;
+  saveCurrentProject();
+  renderProducts();
+  renderDetail();
+  showToast('Product duplicated');
+}
+
+function copyToProject(id) {
+  const src = products.find(x => x.id === id);
+  if (!src) return;
+  const otherProjects = Object.values(allProjects).filter(p => p.id !== currentProjectId);
+  if (!otherProjects.length) { showToast('No other projects to copy to'); return; }
+  const options = otherProjects.map((p,i) => `${i+1}. ${p.name||p.id}`).join('\n');
+  const choice = prompt('Copy "' + (src.name||'product') + '" to which project?\n\n' + options + '\n\nEnter number:');
+  if (!choice) return;
+  const idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= otherProjects.length) { showToast('Invalid selection'); return; }
+  const target = otherProjects[idx];
+  const np = JSON.parse(JSON.stringify(src));
+  np.id = uid();
+  const saved = allProjects[target.id];
+  if (!saved) { showToast('Project not found'); return; }
+  saved.products = saved.products || [];
+  saved.products.push(np);
+  localStorage.setItem('lyffin_projects', JSON.stringify(allProjects));
+  showToast('Copied to ' + (target.name||target.id));
+}
+
+function moveProductToArea(id, val) {
+  if (val === '__new__') {
+    const newArea = prompt('Enter new area name:');
+    if (!newArea) return;
+    if (!usedAreas.includes(newArea)) usedAreas.push(newArea);
+    setField(id, 'area', newArea);
+  } else {
+    setField(id, 'area', val);
+  }
+  saveCurrentProject();
+  renderProducts();
+  renderDetail();
+}
+function trackRevisionChange(val){
+  const prev = project.revision;
+  project.revision = val;
+  if (val && val !== prev) {
+    const note = project._pendingRevNote || '';
+    if (!project.revisionHistory) project.revisionHistory = [];
+    project.revisionHistory.push({rev: val, note, at: new Date().toISOString()});
+    project._pendingRevNote = '';
+    const ni = document.getElementById('rev-note-input');
+    if (ni) ni.value = '';
+  }
+  autosaveProject();
+}
 function setField(id,f,v){const p=products.find(x=>x.id===id);if(p){p[f]=v;if(f==="area"&&v&&!usedAreas.includes(v))usedAreas.push(v);autosaveProject();}}
 function setFinish(id,i,v){const p=products.find(x=>x.id===id);if(p){if(!p.finishes)p.finishes=[];p.finishes[i]=v;autosaveProject();}}
 function setUph(id,i,v){const p=products.find(x=>x.id===id);if(p){if(!p.upholstery)p.upholstery=[];p.upholstery[i]=v;autosaveProject();}}
@@ -741,7 +809,9 @@ function renderProjectInto(c){
   <div class="field"><label>Due date</label><input type="date" value="${project.dueDate}" oninput="project.dueDate=this.value;autosaveProject();"/></div>
 </div>
 <div style="margin-top:12px;max-width:120px;">
-  <div class="field"><label>Revision no.</label><input type="text" value="${esc(project.revision||'1')}" placeholder="1" oninput="project.revision=this.value;autosaveProject();"/></div>
+  <div class="field"><label>Revision no.</label><input type="text" id="rev-input" value="${esc(project.revision||'1')}" placeholder="1" oninput="trackRevisionChange(this.value);"/></div>
+      <div class="field"><label>Revision note <span style="font-size:10px;color:var(--text2);font-weight:400">(what changed in this revision)</span></label><input type="text" id="rev-note-input" value="" placeholder="e.g. Updated fabric for bedroom wardrobe" oninput="project._pendingRevNote=this.value;"/></div>
+      ${(project.revisionHistory&&project.revisionHistory.length)?`<div style="margin-top:6px;"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Revision history</div>${project.revisionHistory.slice().reverse().map(r=>`<div style="font-size:11px;color:var(--text2);padding:5px 0;border-bottom:.5px solid var(--border2)"><span style="color:var(--text);font-weight:500">Rev ${r.rev}</span> · ${r.note||'No note'} <span style="color:var(--text2);margin-left:4px">${new Date(r.at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span></div>`).join('')}</div>`:''}
 </div></div>
 <div class="btn-row">
   <button class="btn" onclick="closeProject()">← Back to projects</button>
@@ -896,7 +966,15 @@ function renderDetail(){
   panel.innerHTML=`
 <div style="font-size:14px;font-weight:600;margin-bottom:2px;">${p.productNo?p.productNo+". ":""}</div>
 <div style="font-size:13px;font-weight:600;margin-bottom:2px;">${p.name?esc(p.name):"<em style='font-weight:400;color:var(--text2)'>Unnamed</em>"}</div>
-<div style="font-size:11px;color:var(--text2);margin-bottom:.5rem;">${esc(p.area)||"No area"} · Qty ${esc(p.qty)}</div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:.5rem;flex-wrap:wrap;">
+    <span style="font-size:11px;color:var(--text2);">Qty ${esc(p.qty)}</span>
+    <select style="font-size:11px;padding:3px 7px;border:.5px solid var(--border2);border-radius:4px;background:var(--bg);color:var(--text);cursor:pointer;" onchange="moveProductToArea('${p.id}',this.value)">
+      ${usedAreas.map(a=>`<option value="${esc(a)}" ${p.area===a?'selected':''}>${esc(a)}</option>`).join('')}
+      ${!usedAreas.includes(p.area)&&p.area?`<option value="${esc(p.area)}" selected>${esc(p.area)}</option>`:''}
+      <option value="" ${!p.area?'selected':''}>No area</option>
+      <option value="__new__">+ New area…</option>
+    </select>
+  </div>
 <div class="sec-label">Product photo</div>
 <input type="file" accept="image/*" id="img-${p.id}" style="display:none" onchange="uploadProductImg('${p.id}',this.files[0])"/>
 ${p.productImage?`<div style="position:relative;margin-bottom:.4rem;"><img src="${p.productImage}" style="width:100%;max-height:150px;object-fit:contain;border-radius:var(--radius);border:.5px solid var(--border);display:block;"/><button onclick="removeProductImg('${p.id}')" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.6);border:none;border-radius:4px;color:white;font-size:11px;padding:2px 8px;cursor:pointer;">Remove</button></div>`:`<div class="drop-zone" onclick="document.getElementById('img-${p.id}').click()" style="margin-bottom:.4rem;"><div style="font-size:20px;margin-bottom:4px;">📷</div><div style="font-size:12px;color:var(--text2);">Upload product photo</div></div>`}
@@ -919,6 +997,8 @@ ${uphRows}
 ${swatchGrid}
 <div style="display:flex;gap:6px;margin-top:.75rem;">
   <button class="btn" style="flex:1;justify-content:center;" onclick="navPrev()" ${idx===0?"disabled":""}>← Prev</button>
+  <button class="btn" style="padding:0 10px;font-size:11px;" onclick="duplicateProduct('${p.id}')" title="Duplicate this product in current project">⧉ Dup</button>
+  <button class="btn" style="padding:0 10px;font-size:11px;" onclick="copyToProject('${p.id}')" title="Copy this product to another project">→ Copy to…</button>
   <button class="btn primary" style="flex:1;justify-content:center;" onclick="navNext()" ${idx===products.length-1?"disabled":""}>Next →</button>
 </div>`;
   if(hasImg)setTimeout(()=>initAnnotCanvas(p.id),50);
