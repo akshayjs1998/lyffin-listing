@@ -175,7 +175,7 @@ async function saveAllProjects(){
     catch(e){alert("Save error: "+e.message);}
   }
 }
-async function showToast(msg){
+function showToast(msg){
   let t=document.getElementById('listing-toast');
   if(!t){t=document.createElement('div');t.id='listing-toast';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#1a1a18;color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;';document.body.appendChild(t);}
   t.textContent=msg;t.style.opacity='1';
