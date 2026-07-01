@@ -181,7 +181,7 @@ function showToast(msg){
   t.textContent=msg;t.style.opacity='1';
   clearTimeout(t._to);t._to=setTimeout(()=>{t.style.opacity='0';},2200);
 }
-function saveCurrentProject(){
+async function saveCurrentProject(){
   if(!currentProjectId)return;
   usedAreas=[...new Set(products.map(p=>p.area).filter(Boolean))];
   allProjects[currentProjectId]={id:currentProjectId,name:project.clientName||"Untitled",meta:`${project.quoteNo||""}${project.quoteNo&&project.dueDate?" · ":""}${project.dueDate?"Due: "+project.dueDate:""}`,updatedAt:new Date().toISOString(),project,products,usedAreas};
