@@ -273,6 +273,31 @@ function compressImage(dataURL, maxDim=1200, quality=0.82){
   });
 }
 
+// Small, aggressively-compressed thumbnail for the Ops dashboard — separate
+// from compressImage's PDF-quality output, since this one gets embedded
+// directly into a Firestore item document and needs to stay tiny (each
+// project can have dozens of items, and each item is a separate document,
+// but the Ops dashboard loads many of them on one screen at once).
+async function compressForOpsThumbnail(dataURL){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width, h=img.height;
+      const maxDim=200;
+      if(w>maxDim||h>maxDim){
+        if(w>h){h=Math.round(h*maxDim/w);w=maxDim;}
+        else{w=Math.round(w*maxDim/h);h=maxDim;}
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      res(canvas.toDataURL('image/jpeg',0.55));
+    };
+    img.onerror=()=>rej(new Error('Could not process image for thumbnail'));
+    img.src=dataURL;
+  });
+}
+
 // Compress swatch to smaller size
 async function compressSwatch(dataURL){
   // Use high quality for swatches - fabric textures need crisp detail
@@ -1729,9 +1754,43 @@ const OPS_CONFIG = {
 
 let opsDb = null;
 let opsProjects = [];
+let opsAuthed = false;
+
+// A single shared account created once in Firebase Auth for this tool to
+// sign in as — the account itself is what Firestore's security rules check
+// (isStaff()), not the password typed here. The password below is only
+// ever used locally to attempt that sign-in; Firebase itself rejects it if
+// wrong, so this can't be bypassed just by reading this file's source.
+const OPS_SERVICE_EMAIL = 'listing-tool@lyffin-platform.local';
+
+async function ensureOpsAuth() {
+  if (opsAuthed) return true;
+  const { getAuth, signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js');
+  const { getApps, initializeApp } = await import('https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js');
+  const existing = getApps().find(a => a.name === 'ops');
+  const opsApp = existing || initializeApp(OPS_CONFIG, 'ops');
+  const auth = getAuth(opsApp);
+  const password = prompt('Enter the Ops push password:');
+  if (!password) return false;
+  try {
+    await signInWithEmailAndPassword(auth, OPS_SERVICE_EMAIL, password);
+    opsAuthed = true;
+    return true;
+  } catch (e) {
+    alert('Incorrect password — could not connect to Ops.');
+    return false;
+  }
+}
 
 async function initOpsFirebase() {
   try {
+    const ok = await ensureOpsAuth();
+    if (!ok) {
+      const sel = document.getElementById('ops-project-select');
+      if (sel) sel.innerHTML = '<option value="">Not connected — reload to try the password again</option>';
+      return;
+    }
+
     const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js');
     const { getFirestore, collection, getDocs, doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js');
 
@@ -1780,20 +1839,50 @@ async function pushToOps() {
     return;
   }
 
+  const okAuth = await ensureOpsAuth();
+  if (!okAuth) {
+    if (statusEl) statusEl.textContent = '⚠ Not connected to Ops — password required.';
+    return;
+  }
+
   const opsProjectId = sel.value;
   btn.disabled = true;
   btn.textContent = 'Pushing…';
   if (statusEl) statusEl.textContent = '';
 
   try {
-    const { doc, setDoc, collection, writeBatch, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js');
+    const { doc, setDoc, collection, getDocs, writeBatch, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js');
+
+    // Find out which of these items already exist in Ops. This matters
+    // because re-pushing (e.g. to add photos after the fact) must NOT reset
+    // an item that's already in production back to "pending" — that would
+    // silently wipe out real progress the factory floor has already logged.
+    const existingSnap = await getDocs(collection(opsDb, 'projects', opsProjectId, 'items'));
+    const existingIds = new Set(existingSnap.docs.map(d => d.id));
+
+    // Build a small thumbnail per product ahead of time — only for products
+    // that actually have a photo, using the annotated version if one exists
+    // (same "best available image" priority already used for the PDF
+    // exports), so it's ready before we assemble the write batch below.
+    const thumbnails = {};
+    await Promise.all(products.map(async p => {
+      const source = p.annotatedImage || p.productImage || null;
+      if (!source) return;
+      try { thumbnails[p.id] = await compressForOpsThumbnail(source); }
+      catch (e) { /* skip this one's thumbnail — the rest of the push still proceeds */ }
+    }));
 
     const batch = writeBatch(opsDb);
+    let newCount = 0, updatedCount = 0;
 
     // Push each product as an item under the project
     products.forEach(p => {
       const itemRef = doc(collection(opsDb, 'projects', opsProjectId, 'items'), p.id);
-      batch.set(itemRef, {
+      const isNew = !existingIds.has(p.id);
+
+      // Fields safe to (re-)send every time — descriptive content only,
+      // never production status.
+      const data = {
         productNo:    p.productNo || '',
         name:         p.name || 'Unnamed product',
         qty:          parseInt(p.qty) || 1,
@@ -1802,16 +1891,28 @@ async function pushToOps() {
         details:      p.details || '',
         finishes:     (p.finishes || []).filter(Boolean),
         upholstery:   (p.upholstery || []).filter(Boolean),
-        // Production stages — all start as pending
-        carpentryStatus:  'pending', // Structure stage
-        polishStatus:     'pending',
-        upholsteryStatus: 'pending', // always included — mark N/A manually if not needed
-        packingStatus:    'pending',
-        overallStatus:    'Structure',
+        thumbnail:    thumbnails[p.id] || null,
         pushedAt:     serverTimestamp(),
         pushedFrom:   'factory-listing-tool',
         listingProjectId: currentProjectId,
-      });
+      };
+
+      if (isNew) {
+        // Brand new item — safe to set its production stages to the start.
+        data.carpentryStatus  = 'pending'; // Structure stage
+        data.polishStatus     = 'pending';
+        data.upholsteryStatus = 'pending'; // always included — mark N/A manually if not needed
+        data.packingStatus    = 'pending';
+        data.overallStatus    = 'Structure';
+        newCount++;
+      } else {
+        updatedCount++;
+      }
+
+      // merge:true means only these fields are touched — an existing item's
+      // stage statuses (deliberately omitted above when not new) are left
+      // completely untouched by a re-push.
+      batch.set(itemRef, data, { merge: true });
     });
 
     // Note: project status update skipped (requires auth)
@@ -1821,7 +1922,7 @@ async function pushToOps() {
 
     btn.textContent = '✓ Pushed!';
     btn.style.background = '#27ae60';
-    if (statusEl) statusEl.textContent = `✓ ${products.length} products pushed to Ops. Factory floor can now track progress.`;
+    if (statusEl) statusEl.textContent = `✓ ${newCount} new, ${updatedCount} updated — pushed to Ops. Factory floor can now track progress.`;
 
     setTimeout(() => {
       btn.disabled = false;
