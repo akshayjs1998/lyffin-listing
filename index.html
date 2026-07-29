@@ -150,6 +150,7 @@ let products=[];
 let selectedId=null;
 let usedAreas=[];
 let annotCanvas=null,annotCtx=null,annotDrawing=false,annotTool="arrow",annotColor="#e74c3c",annotStartX=0,annotStartY=0,annotSnapshot=null;
+let annotThickness=4,annotFontSize=24;
 
 function openDB(){
   return new Promise((res,rej)=>{
@@ -480,7 +481,7 @@ function annotMouseDown(e){
         inp.select();
       });
     });
-    const fontSize=Math.max(22,Math.round(annotCanvas.width/28));
+    const fontSize=annotFontSize;
     function drawLabel(){
       const label=inp.value.trim();
       if(!label){inp.remove();return;}
@@ -518,14 +519,16 @@ function annotMouseDown(e){
 function annotMouseMove(e){if(!annotDrawing||!annotSnapshot)return;const r=annotCanvas.getBoundingClientRect();const sx=annotCanvas.width/r.width,sy=annotCanvas.height/r.height;const x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy;annotCtx.putImageData(annotSnapshot,0,0);drawAnnotShape(annotStartX,annotStartY,x,y);}
 function annotMouseUp(e){if(!annotDrawing)return;annotDrawing=false;const r=annotCanvas.getBoundingClientRect();const sx=annotCanvas.width/r.width,sy=annotCanvas.height/r.height;const x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy;if(annotSnapshot)annotCtx.putImageData(annotSnapshot,0,0);drawAnnotShape(annotStartX,annotStartY,x,y);annotSnapshot=null;}
 function drawAnnotShape(x1,y1,x2,y2){
-  annotCtx.strokeStyle=annotColor;annotCtx.fillStyle=annotColor;annotCtx.lineWidth=Math.max(2,annotCanvas.width/200);
-  if(annotTool==="arrow"){const hl=Math.max(16,annotCanvas.width/40);const a=Math.atan2(y2-y1,x2-x1);annotCtx.beginPath();annotCtx.moveTo(x1,y1);annotCtx.lineTo(x2,y2);annotCtx.stroke();annotCtx.beginPath();annotCtx.moveTo(x2,y2);annotCtx.lineTo(x2-hl*Math.cos(a-Math.PI/6),y2-hl*Math.sin(a-Math.PI/6));annotCtx.lineTo(x2-hl*Math.cos(a+Math.PI/6),y2-hl*Math.sin(a+Math.PI/6));annotCtx.closePath();annotCtx.fill();}
+  annotCtx.strokeStyle=annotColor;annotCtx.fillStyle=annotColor;annotCtx.lineWidth=annotThickness;
+  if(annotTool==="arrow"){const hl=Math.max(16,annotThickness*4);const a=Math.atan2(y2-y1,x2-x1);annotCtx.beginPath();annotCtx.moveTo(x1,y1);annotCtx.lineTo(x2,y2);annotCtx.stroke();annotCtx.beginPath();annotCtx.moveTo(x2,y2);annotCtx.lineTo(x2-hl*Math.cos(a-Math.PI/6),y2-hl*Math.sin(a-Math.PI/6));annotCtx.lineTo(x2-hl*Math.cos(a+Math.PI/6),y2-hl*Math.sin(a+Math.PI/6));annotCtx.closePath();annotCtx.fill();}
   else if(annotTool==="circle"){const rx=Math.abs(x2-x1)/2,ry=Math.abs(y2-y1)/2;annotCtx.beginPath();annotCtx.ellipse((x1+x2)/2,(y1+y2)/2,rx,ry,0,0,Math.PI*2);annotCtx.stroke();}
   else if(annotTool==="line"){annotCtx.beginPath();annotCtx.moveTo(x1,y1);annotCtx.lineTo(x2,y2);annotCtx.stroke();}
   // Note: "text" tool is handled directly in annotMouseDown (needs screen coords from the event)
 }
 function setAnnotTool(t){annotTool=t;document.querySelectorAll(".tool-btn").forEach(b=>b.classList.toggle("active",b.dataset.tool===t));}
 function setAnnotColor(c){annotColor=c;document.querySelectorAll(".color-dot").forEach(d=>d.classList.toggle("active",d.dataset.color===c));}
+function setAnnotThickness(v){annotThickness=Math.max(1,Math.min(20,parseFloat(v)||4));const lbl=document.getElementById("annot-thickness-val");if(lbl)lbl.textContent=annotThickness;}
+function setAnnotFontSize(v){annotFontSize=Math.max(10,Math.min(80,parseInt(v)||24));const lbl=document.getElementById("annot-fontsize-val");if(lbl)lbl.textContent=annotFontSize;}
 function saveAnnotation(){const p=getProd();if(!p||!annotCanvas)return;p.annotatedImage=annotCanvas.toDataURL("image/png");saveCurrentProject();renderDetail();}
 function clearAnnotation(){const p=getProd();if(!p||!p.productImage||!annotCanvas||!annotCtx)return;const img=new Image();img.onload=()=>annotCtx.drawImage(img,0,0);img.src=p.productImage;p.annotatedImage=null;saveCurrentProject();}
 
@@ -980,6 +983,16 @@ function renderDetail(){
   <button class="tool-btn" data-tool="line" onclick="setAnnotTool('line')">/ Line</button>
   <button class="tool-btn" data-tool="text" onclick="setAnnotTool('text')">T Text</button>
   <div style="display:flex;gap:4px;margin-left:4px;">${["#e74c3c","#f39c12","#2ecc71","#3498db","#111","#fff"].map(c=>`<div class="color-dot${c===annotColor?" active":""}" data-color="${c}" style="background:${c};${c==="#fff"?"border-color:#ccc;":""}" onclick="setAnnotColor('${c}')"></div>`).join("")}</div>
+  <div style="display:flex;align-items:center;gap:5px;margin-left:8px;padding-left:8px;border-left:1px solid var(--border);font-size:11px;color:var(--text2);">
+    <span>Thickness</span>
+    <input type="range" min="1" max="16" step="1" value="${annotThickness}" oninput="setAnnotThickness(this.value)" style="width:60px;">
+    <span id="annot-thickness-val" style="min-width:16px;">${annotThickness}</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:5px;margin-left:6px;font-size:11px;color:var(--text2);">
+    <span>Font</span>
+    <input type="range" min="12" max="72" step="2" value="${annotFontSize}" oninput="setAnnotFontSize(this.value)" style="width:60px;">
+    <span id="annot-fontsize-val" style="min-width:20px;">${annotFontSize}</span>
+  </div>
 </div>
 <div class="canvas-wrap"><canvas id="annot-canvas-${p.id}" onmousedown="annotMouseDown(event)" onmousemove="annotMouseMove(event)" onmouseup="annotMouseUp(event)" onmouseleave="annotDrawing=false;annotSnapshot=null"></canvas></div>
 <div style="display:flex;gap:6px;margin-bottom:.25rem;">
