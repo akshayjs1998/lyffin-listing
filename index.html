@@ -151,6 +151,18 @@ let selectedId=null;
 let usedAreas=[];
 let annotCanvas=null,annotCtx=null,annotDrawing=false,annotTool="arrow",annotColor="#e74c3c",annotStartX=0,annotStartY=0,annotSnapshot=null;
 let annotThickness=4,annotFontSize=24;
+let annotUndoStack=[];
+const ANNOT_UNDO_MAX=8;
+function pushAnnotUndo(){
+  if(!annotCtx||!annotCanvas)return;
+  annotUndoStack.push(annotCtx.getImageData(0,0,annotCanvas.width,annotCanvas.height));
+  if(annotUndoStack.length>ANNOT_UNDO_MAX)annotUndoStack.shift(); // cap memory use in a long session
+}
+function undoAnnotationStep(){
+  if(!annotCtx||!annotUndoStack.length){showToast("Nothing to undo");return;}
+  const prev=annotUndoStack.pop();
+  annotCtx.putImageData(prev,0,0);
+}
 
 function openDB(){
   return new Promise((res,rej)=>{
@@ -441,6 +453,7 @@ function initAnnotCanvas(id){
   const p=getProd();if(!p||!p.productImage)return;
   annotCanvas=document.getElementById("annot-canvas-"+id);if(!annotCanvas)return;
   annotCtx=annotCanvas.getContext("2d");
+  annotUndoStack=[]; // history doesn't carry over between products/images
   const img=new Image();
   img.onload=()=>{annotCanvas.width=img.width;annotCanvas.height=img.height;annotCtx.drawImage(img,0,0);if(p.annotatedImage){const ai=new Image();ai.onload=()=>annotCtx.drawImage(ai,0,0);ai.src=p.annotatedImage;}};
   img.src=p.productImage;
@@ -485,6 +498,7 @@ function annotMouseDown(e){
     function drawLabel(){
       const label=inp.value.trim();
       if(!label){inp.remove();return;}
+      pushAnnotUndo();
       annotCtx.font="bold "+fontSize+"px Arial";
       annotCtx.lineWidth=Math.max(2,fontSize/7);
       annotCtx.strokeStyle="white";
@@ -515,6 +529,7 @@ function annotMouseDown(e){
   annotStartX=(e.clientX-r.left)*sx;
   annotStartY=(e.clientY-r.top)*sy;
   annotSnapshot=annotCtx.getImageData(0,0,annotCanvas.width,annotCanvas.height);
+  pushAnnotUndo();
 }
 function annotMouseMove(e){if(!annotDrawing||!annotSnapshot)return;const r=annotCanvas.getBoundingClientRect();const sx=annotCanvas.width/r.width,sy=annotCanvas.height/r.height;const x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy;annotCtx.putImageData(annotSnapshot,0,0);drawAnnotShape(annotStartX,annotStartY,x,y);}
 function annotMouseUp(e){if(!annotDrawing)return;annotDrawing=false;const r=annotCanvas.getBoundingClientRect();const sx=annotCanvas.width/r.width,sy=annotCanvas.height/r.height;const x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy;if(annotSnapshot)annotCtx.putImageData(annotSnapshot,0,0);drawAnnotShape(annotStartX,annotStartY,x,y);annotSnapshot=null;}
@@ -530,7 +545,7 @@ function setAnnotColor(c){annotColor=c;document.querySelectorAll(".color-dot").f
 function setAnnotThickness(v){annotThickness=Math.max(1,Math.min(20,parseFloat(v)||4));const lbl=document.getElementById("annot-thickness-val");if(lbl)lbl.textContent=annotThickness;}
 function setAnnotFontSize(v){annotFontSize=Math.max(10,Math.min(80,parseInt(v)||24));const lbl=document.getElementById("annot-fontsize-val");if(lbl)lbl.textContent=annotFontSize;}
 function saveAnnotation(){const p=getProd();if(!p||!annotCanvas)return;p.annotatedImage=annotCanvas.toDataURL("image/png");saveCurrentProject();renderDetail();}
-function clearAnnotation(){const p=getProd();if(!p||!p.productImage||!annotCanvas||!annotCtx)return;const img=new Image();img.onload=()=>annotCtx.drawImage(img,0,0);img.src=p.productImage;p.annotatedImage=null;saveCurrentProject();}
+function clearAnnotation(){const p=getProd();if(!p||!p.productImage||!annotCanvas||!annotCtx)return;pushAnnotUndo();const img=new Image();img.onload=()=>annotCtx.drawImage(img,0,0);img.src=p.productImage;p.annotatedImage=null;saveCurrentProject();}
 
 function buildPDF(branded=true){
   const{clientName,quoteNo,projectName,date,dueDate,preparedBy,revision}=project;
@@ -997,7 +1012,8 @@ function renderDetail(){
 <div class="canvas-wrap"><canvas id="annot-canvas-${p.id}" onmousedown="annotMouseDown(event)" onmousemove="annotMouseMove(event)" onmouseup="annotMouseUp(event)" onmouseleave="annotDrawing=false;annotSnapshot=null"></canvas></div>
 <div style="display:flex;gap:6px;margin-bottom:.25rem;">
   <button class="btn sm success" onclick="saveAnnotation()">✓ Save annotation</button>
-  <button class="btn sm" onclick="clearAnnotation()">↺ Reset</button>
+  <button class="btn sm" onclick="undoAnnotationStep()">← Undo</button>
+  <button class="btn sm" onclick="clearAnnotation()">⟲ Reset all</button>
   ${p.annotatedImage?'<span style="font-size:11px;color:var(--success-text);align-self:center;">✓ Saved</span>':""}
 </div>`:"";
 
