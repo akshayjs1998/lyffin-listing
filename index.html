@@ -1915,6 +1915,25 @@ async function pushToOps() {
       batch.set(itemRef, data, { merge: true });
     });
 
+    // An item that existed in Ops before but isn't in this push's product
+    // list anymore was dropped in this revision (e.g. a product cut from
+    // Rev 2). Rather than leaving it silently sitting there unchanged
+    // forever, flag it clearly as removed — Ops moves it out of the active
+    // item list into a separate "Removed" view, so nothing vanishes
+    // without a trace but it also doesn't clutter ongoing production.
+    const currentIds = new Set(products.map(p => p.id));
+    let removedCount = 0;
+    existingSnap.docs.forEach(d => {
+      if (currentIds.has(d.id)) return;
+      if (d.data().removed) return; // already flagged from an earlier push
+      batch.set(doc(collection(opsDb, 'projects', opsProjectId, 'items'), d.id), {
+        removed: true,
+        removedAt: serverTimestamp(),
+        removedFrom: 'factory-listing-tool',
+      }, { merge: true });
+      removedCount++;
+    });
+
     // Note: project status update skipped (requires auth)
     // Update manually in the Ops dashboard after pushing
 
@@ -1922,7 +1941,7 @@ async function pushToOps() {
 
     btn.textContent = '✓ Pushed!';
     btn.style.background = '#27ae60';
-    if (statusEl) statusEl.textContent = `✓ ${newCount} new, ${updatedCount} updated — pushed to Ops. Factory floor can now track progress.`;
+    if (statusEl) statusEl.textContent = `✓ ${newCount} new, ${updatedCount} updated${removedCount ? `, ${removedCount} removed` : ''} — pushed to Ops. Factory floor can now track progress.`;
 
     setTimeout(() => {
       btn.disabled = false;
