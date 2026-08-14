@@ -1,4 +1,4 @@
-const CACHE = 'lyffin-listing-v1785330579';
+const CACHE = 'lyffin-listing-v1786707345';
 const FILES = [
   '/lyffin-listing/index.html',
   '/lyffin-listing/manifest.json',
@@ -20,6 +20,6 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request, { cache: 'no-store' }).catch(() => caches.match(e.request))
   );
 });

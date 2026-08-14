@@ -296,7 +296,12 @@ async function compressForOpsThumbnail(dataURL){
     const img=new Image();
     img.onload=()=>{
       let w=img.width, h=img.height;
-      const maxDim=200;
+      // 560px at decent JPEG quality — previously kept much smaller (200px)
+      // out of caution about Firestore's 1MB document limit, back when
+      // items shared one combined document. Each item is its own small
+      // document now, so there's real headroom for a sharper image
+      // without any practical risk of hitting that limit.
+      const maxDim=560;
       if(w>maxDim||h>maxDim){
         if(w>h){h=Math.round(h*maxDim/w);w=maxDim;}
         else{w=Math.round(w*maxDim/h);h=maxDim;}
@@ -304,7 +309,7 @@ async function compressForOpsThumbnail(dataURL){
       const canvas=document.createElement('canvas');
       canvas.width=w;canvas.height=h;
       canvas.getContext('2d').drawImage(img,0,0,w,h);
-      res(canvas.toDataURL('image/jpeg',0.55));
+      res(canvas.toDataURL('image/jpeg',0.78));
     };
     img.onerror=()=>rej(new Error('Could not process image for thumbnail'));
     img.src=dataURL;
