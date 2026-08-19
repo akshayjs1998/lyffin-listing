@@ -145,7 +145,7 @@ let db=null;
 let allProjects={};
 let currentProjectId=null;
 let step=0;
-let project={clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[]};
+let project={clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[],bufferDays:5};
 let products=[];
 let selectedId=null;
 let usedAreas=[];
@@ -207,8 +207,8 @@ function autosaveProject(){
   clearTimeout(_autosaveTimer);
   _autosaveTimer=setTimeout(()=>saveCurrentProject(),600);
 }
-function openProject(id){const p=allProjects[id];if(!p)return;currentProjectId=id;project={...{clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[]},...p.project};products=p.products||[];usedAreas=p.usedAreas||[];selectedId=null;step=0;document.getElementById("save-btn").style.display="inline-flex";document.getElementById("close-btn").style.display="inline-flex";render();}
-function newProject(){currentProjectId="proj_"+Date.now();project={clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[]};products=[blank()];usedAreas=[];selectedId=null;step=0;document.getElementById("save-btn").style.display="inline-flex";document.getElementById("close-btn").style.display="inline-flex";render();}
+function openProject(id){const p=allProjects[id];if(!p)return;currentProjectId=id;project={...{clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[],bufferDays:5},...p.project};products=p.products||[];usedAreas=p.usedAreas||[];selectedId=null;step=0;document.getElementById("save-btn").style.display="inline-flex";document.getElementById("close-btn").style.display="inline-flex";render();}
+function newProject(){currentProjectId="proj_"+Date.now();project={clientName:"",quoteNo:"",projectName:"",date:new Date().toISOString().split("T")[0],dueDate:"",preparedBy:"",revision:"1",clientAddress:"",clientPhone:"",revisionHistory:[],bufferDays:5};products=[blank()];usedAreas=[];selectedId=null;step=0;document.getElementById("save-btn").style.display="inline-flex";document.getElementById("close-btn").style.display="inline-flex";render();}
 async function deleteProject(id){if(!confirm("Delete this project permanently?"))return;delete allProjects[id];await dbDelete(id);renderHome();}
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────────────────────
@@ -552,11 +552,25 @@ function setAnnotFontSize(v){annotFontSize=Math.max(10,Math.min(80,parseInt(v)||
 function saveAnnotation(){const p=getProd();if(!p||!annotCanvas)return;p.annotatedImage=annotCanvas.toDataURL("image/png");saveCurrentProject();renderDetail();}
 function clearAnnotation(){const p=getProd();if(!p||!p.productImage||!annotCanvas||!annotCtx)return;pushAnnotUndo();const img=new Image();img.onload=()=>annotCtx.drawImage(img,0,0);img.src=p.productImage;p.annotatedImage=null;saveCurrentProject();}
 
+// Factory copy shows an earlier date than what's promised to the client —
+// production targets the buffer days ahead, so QC, packing and any
+// last-minute issues still leave room to hit the real client date.
+function computeFactoryDueDate(dueDate, bufferDays){
+  if(!dueDate) return "";
+  const bd = Math.max(0, +bufferDays || 0);
+  const d = new Date(dueDate+"T00:00:00");
+  if(isNaN(d.getTime())) return "";
+  d.setDate(d.getDate()-bd);
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const dd=String(d.getDate()).padStart(2,"0");
+  return `${dd}-${months[d.getMonth()]}-${d.getFullYear()}`;
+}
+
 function buildPDF(branded=true){
   const{clientName,quoteNo,projectName,date,dueDate,preparedBy,revision}=project;
   // Format dates from YYYY-MM-DD to DD-MMM-YYYY
   function fmtDate(d){if(!d)return"";const[y,m,mo]=d.split("-");const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return`${mo}-${months[parseInt(m,10)-1]}-${y}`;}
-  const dueDateFmt=fmtDate(dueDate);
+  const dueDateFmt = branded ? fmtDate(dueDate) : computeFactoryDueDate(dueDate, project.bufferDays);
   const dateFmt=fmtDate(date);
   const areas=[...new Set(products.map(p=>p.area).filter(Boolean))];
   const tot=totalPieces();
@@ -854,7 +868,10 @@ function renderProjectInto(c){
   <div class="field"><label>Project / site</label><input type="text" value="${esc(project.projectName)}" placeholder="Panoor Residence" oninput="project.projectName=this.value;autosaveProject();"/></div>
   <div class="field"><label>Prepared by</label><input type="text" value="${esc(project.preparedBy)}" placeholder="Akshay" oninput="project.preparedBy=this.value;autosaveProject();"/></div>
   <div class="field"><label>Date</label><input type="date" value="${project.date}" oninput="project.date=this.value;autosaveProject();"/></div>
-  <div class="field"><label>Due date</label><input type="date" value="${project.dueDate}" oninput="project.dueDate=this.value;autosaveProject();"/></div>
+  <div class="field"><label>Due date</label><input type="date" value="${project.dueDate}" oninput="project.dueDate=this.value;autosaveProject();renderProject();"/></div>
+  <div class="field"><label>Factory copy buffer (days)</label><input type="number" min="0" max="60" value="${project.bufferDays!=null?project.bufferDays:5}" oninput="project.bufferDays=Math.max(0,+this.value||0);autosaveProject();renderProject();"/>
+    <div style="font-size:11px;color:var(--text2);margin-top:4px">${(function(){const f=computeFactoryDueDate(project.dueDate,project.bufferDays);return f?`Factory copy will show: ${f}`:'Set a due date above to see the factory date';})()}</div>
+  </div>
 </div>
 <div style="margin-top:12px;max-width:120px;">
   <div class="field"><label>Revision no.</label><input type="text" id="rev-input" value="${esc(project.revision||'1')}" placeholder="1" oninput="trackRevisionChange(this.value);"/></div>
@@ -1096,10 +1113,10 @@ ${id2<products.length?`<div class="warn">⚠ ${products.length-id2} product(s) m
     <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:2px;">Factory Listing PDF</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn success" onclick="generatePDF(true)">
-        🖨 Branded PDF <span style="font-size:11px;opacity:.7;">(with Lyffin logo)</span>
+        🖨 Branded PDF <span style="font-size:11px;opacity:.7;">(client copy — real due date)</span>
       </button>
       <button class="btn" onclick="generatePDF(false)" style="border-color:var(--border2);">
-        🖨 Unbranded PDF <span style="font-size:11px;opacity:.7;">(logo & address hidden)</span>
+        🖨 Unbranded PDF <span style="font-size:11px;opacity:.7;">(factory copy — buffered date)</span>
       </button>
     </div>
   </div>
