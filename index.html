@@ -408,8 +408,11 @@ function trackRevisionChange(val){
     if (!project.revisionHistory) project.revisionHistory = [];
     project.revisionHistory.push({rev: val, note, at: new Date().toISOString()});
     project._pendingRevNote = '';
-    const ni = document.getElementById('rev-note-input');
-    if (ni) ni.value = '';
+    autosaveProject();
+    renderProject(); // the note was saving correctly before, but the visible
+                      // Revision history list never refreshed to show it —
+                      // this is what actually makes it appear on screen.
+    return;
   }
   autosaveProject();
 }
@@ -1091,6 +1094,12 @@ function renderExportInto(c){
 </div>
 ${ip>0?`<div class="warn">⚠ ${ip} product(s) missing upholstery.</div>`:""}
 ${id2<products.length?`<div class="warn">⚠ ${products.length-id2} product(s) missing photos.</div>`:""}
+${(function(){
+  const hist=project.revisionHistory||[];
+  const last=hist.length?hist[hist.length-1]:null;
+  const rev=project.revision||"1";
+  return `<div style="padding:9px 13px;background:var(--info-bg);color:var(--info-text);border-radius:var(--radius);font-size:13px;margin-bottom:.75rem;"><b>Rev ${esc(rev)}</b> — ${last&&last.note?esc(last.note):"<em>No revision note recorded</em>"}</div>`;
+})()}
 <div class="tbl-wrap" style="margin-bottom:1rem;"><div style="overflow-x:auto;"><table class="tbl">
   <thead><tr>${["#","Product","Qty","Area","Dimensions","Finishes","Upholstery","Photo","Annot","Drw","Swatch"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
   <tbody>${products.map((p,i)=>`<tr onclick="goStep(1);setTimeout(()=>selectAndDetail('${p.id}'),50);" style="cursor:pointer;">
