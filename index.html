@@ -572,6 +572,11 @@ function computeFactoryDueDate(dueDate, bufferDays){
 
 function buildPDF(branded=true){
   const{clientName,quoteNo,projectName,date,dueDate,preparedBy,revision}=project;
+  // 35 rows was too optimistic for the fixed A4 page height once real
+  // content is involved — a dimensions note or a long finish/upholstery
+  // list wraps to two lines, and rows near the bottom of the page were
+  // getting silently clipped instead of flowing onto the next page.
+  const SUMMARY_ROWS_PER_PAGE = 24;
   // Format dates from YYYY-MM-DD to DD-MMM-YYYY
   function fmtDate(d){if(!d)return"";const[y,m,mo]=d.split("-");const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return`${mo}-${months[parseInt(m,10)-1]}-${y}`;}
   const dueDateFmt = branded ? fmtDate(dueDate) : computeFactoryDueDate(dueDate, project.bufferDays);
@@ -789,17 +794,23 @@ ${productPages}
     <div class="sbox"><div class="sn">${tot}</div><div class="sl">Total pieces</div></div>
     <div class="sbox"><div class="sn">${areas.length}</div><div class="sl">Areas</div></div>
   </div>
+  ${(function(){
+    const hist=project.revisionHistory||[];
+    const last=hist.length?hist[hist.length-1]:null;
+    if(!last||!last.note) return "";
+    return `<div style="border:1px solid #e0c988;background:#fdf6e3;border-radius:4px;padding:6px 10px;font-size:10px;color:#555;margin-bottom:2px;"><b style="color:#111;">Rev ${esc(revision||"1")} note:</b> ${esc(last.note)}</div>`;
+  })()}
   <table class="stbl">
     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
-    <tbody>${products.slice(0,35).map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||i+1}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}${p.details?`<br/><span style="font-size:10px;color:#888;font-style:italic;">${escNL(p.details)}</span>`:""}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
+    <tbody>${products.slice(0,SUMMARY_ROWS_PER_PAGE).map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||i+1}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}${p.details?`<br/><span style="font-size:10px;color:#888;font-style:italic;">${escNL(p.details)}</span>`:""}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
   </table>
-  <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page 1 of ${Math.ceil(products.length/35)}</span></div>
+  <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page 1 of ${Math.ceil(products.length/SUMMARY_ROWS_PER_PAGE)}</span></div>
 </div>
 
-${products.length>35?Array.from({length:Math.ceil((products.length-35)/35)},(_,ci)=>{
+${products.length>SUMMARY_ROWS_PER_PAGE?Array.from({length:Math.ceil((products.length-SUMMARY_ROWS_PER_PAGE)/SUMMARY_ROWS_PER_PAGE)},(_,ci)=>{
   const pageNum=ci+2;
-  const start=35+ci*35;
-  const chunk=products.slice(start,start+35);
+  const start=SUMMARY_ROWS_PER_PAGE+ci*SUMMARY_ROWS_PER_PAGE;
+  const chunk=products.slice(start,start+SUMMARY_ROWS_PER_PAGE);
   return `<div class="pg">
   <div class="ph">
     ${summaryLogoHtml}
@@ -810,7 +821,7 @@ ${products.length>35?Array.from({length:Math.ceil((products.length-35)/35)},(_,c
     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
     <tbody>${chunk.map((p,i)=>`<tr><td style="color:#999">${esc(p.productNo)||(start+i+1)}</td><td><b>${esc(p.name)}</b></td><td style="text-align:center;font-weight:600">${esc(p.qty)}</td><td style="color:#c0392b">${esc(p.area)||"—"}</td><td style="color:#555">${escNL(p.dimensions)}${p.details?`<br/><span style="font-size:10px;color:#888;font-style:italic;">${escNL(p.details)}</span>`:""}</td><td>${(p.finishes||[]).filter(Boolean).map(esc).join(", ")||"—"}</td><td>${(p.upholstery||[]).filter(Boolean).map(esc).join(", ")||"To be selected"}</td></tr>`).join("")}</tbody>
   </table>
-  <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page ${pageNum} of ${Math.ceil(products.length/35)}</span></div>
+  <div class="pf"><span>Lyffin — ${esc(clientName)}</span><span>Page ${pageNum} of ${Math.ceil(products.length/SUMMARY_ROWS_PER_PAGE)}</span></div>
 </div>`;}).join(""):""}
 </body></html>`;
 
