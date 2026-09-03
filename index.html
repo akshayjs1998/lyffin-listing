@@ -1730,13 +1730,17 @@ function renderReturnPickupModal(){
   const sels=window._returnPickupSelections;
   const itemsHtml=products.map(p=>{
     const sel=sels[p.id]||{};
+    const img=p.annotatedImage||p.productImage||null;
     return `<div style="padding:10px 0;border-bottom:1px solid #eee;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
         <input type="checkbox" ${sel.selected?"checked":""} onchange="toggleReturnPickupItem('${p.id}', this.checked)">
-        <span style="font-size:13px;font-weight:600;color:#1a1a18;">${esc(p.name||"Unnamed product")}</span>
-        <span style="font-size:12px;color:#888;">${esc(p.area||"")}</span>
+        ${img?`<img src="${img}" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:.5px solid #ddd;flex-shrink:0;"/>`:`<div style="width:34px;height:34px;border:.5px dashed #ccc;border-radius:4px;flex-shrink:0;"></div>`}
+        <span style="flex:1;min-width:0;">
+          <span style="display:block;font-size:13px;font-weight:600;color:#1a1a18;">${esc(p.name||"Unnamed product")}</span>
+          <span style="display:block;font-size:11px;color:#888;margin-top:1px;">No. ${esc(p.productNo||"—")}${p.area?" · "+esc(p.area):""}</span>
+        </span>
       </label>
-      <div id="rp-detail-${p.id}" style="display:${sel.selected?"flex":"none"};gap:8px;margin-top:8px;padding-left:26px;flex-wrap:wrap;">
+      <div id="rp-detail-${p.id}" style="display:${sel.selected?"flex":"none"};gap:8px;margin-top:8px;padding-left:52px;flex-wrap:wrap;">
         <input type="text" placeholder="Reason for return" value="${esc(sel.reason||"")}" oninput="setReturnPickupField('${p.id}','reason',this.value)" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
         <select onchange="setReturnPickupField('${p.id}','action',this.value)" style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
           <option value="Replace" ${(sel.action||"Replace")==="Replace"?"selected":""}>Replace</option>
