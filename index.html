@@ -1809,38 +1809,49 @@ window.generateReturnPickupPDF=function(){
 function buildReturnPickupPDF(items){
   const {clientName,quoteNo,projectName,clientAddress,clientPhone,date,revision}=project;
 
-  // Same conservative pagination as the Delivery Checklist — fewer rows on
-  // page 1 to leave room for the recipient/stat box, so a large return
-  // batch never gets silently clipped off the bottom of a page.
-  const ROWS_PER_PAGE_1=22;
-  const ROWS_PER_PAGE=30;
+  // Rows are meaningfully taller now that each one carries a thumbnail —
+  // roughly half as many fit per page as a plain-text row would. Kept
+  // deliberately conservative, the same way the Delivery Checklist and
+  // Product Summary pagination were tuned, so a large return batch never
+  // gets silently clipped off the bottom of a page.
+  const ROWS_PER_PAGE_1=11;
+  const ROWS_PER_PAGE=14;
   const pages=[];
   let remaining=[...items];
   pages.push(remaining.splice(0,ROWS_PER_PAGE_1));
   while(remaining.length>0) pages.push(remaining.splice(0,ROWS_PER_PAGE));
   const totalPages=pages.length;
 
-  const buildRows=(pageItems,startIdx)=>pageItems.map((it,i)=>`
+  const buildRows=(pageItems,startIdx)=>pageItems.map((it,i)=>{
+    const img=it.product.annotatedImage||it.product.productImage||null;
+    return `
     <tr>
-      <td style="text-align:center;font-size:10px;color:#888;">${startIdx+i+1}</td>
-      <td style="font-size:11px;font-weight:600;">${esc(it.product.name||"—")}</td>
-      <td style="font-size:10px;color:#555;">${esc(it.product.area||"—")}</td>
-      <td style="font-size:10px;color:#555;">${esc(it.reason||"—")}</td>
-      <td style="text-align:center;font-size:10px;font-weight:700;color:${it.action==="Repair"?"#b45309":"#c0392b"};">${esc(it.action)}</td>
-      <td style="text-align:center;"><div style="width:18px;height:18px;border:1.5px solid #333;border-radius:3px;margin:0 auto;"></div></td>
-      <td style="font-size:9px;color:#aaa;border-bottom:.5px solid #eee;">&nbsp;</td>
-    </tr>`).join("");
+      <td style="text-align:center;font-size:10px;color:#888;vertical-align:middle;">${startIdx+i+1}</td>
+      <td style="vertical-align:middle;padding:4px 6px;">
+        ${img?`<img src="${img}" style="width:42px;height:42px;object-fit:cover;border-radius:4px;border:.5px solid #ddd;display:block;"/>`:`<div style="width:42px;height:42px;border:.5px dashed #ccc;border-radius:4px;"></div>`}
+      </td>
+      <td style="font-size:11px;vertical-align:middle;">
+        <div style="font-weight:600;">${esc(it.product.name||"—")}</div>
+        <div style="font-size:9.5px;color:#888;margin-top:1px;">No. ${esc(it.product.productNo||"—")}</div>
+        ${it.product.details?`<div style="font-size:9px;color:#888;font-style:italic;margin-top:1px;">${escNL(it.product.details)}</div>`:""}
+      </td>
+      <td style="font-size:10px;color:#555;vertical-align:middle;">${esc(it.product.area||"—")}</td>
+      <td style="font-size:10px;color:#555;vertical-align:middle;">${esc(it.reason||"—")}</td>
+      <td style="text-align:center;font-size:10px;font-weight:700;color:${it.action==="Repair"?"#b45309":"#c0392b"};vertical-align:middle;">${esc(it.action)}</td>
+      <td style="text-align:center;vertical-align:middle;"><div style="width:18px;height:18px;border:1.5px solid #333;border-radius:3px;margin:0 auto;"></div></td>
+    </tr>`;
+  }).join("");
 
   const tableHead=`
     <thead>
       <tr>
-        <th style="width:28px;text-align:center;">#</th>
-        <th>Product Name</th>
-        <th style="width:90px;">Placement</th>
-        <th style="width:140px;">Reason for Return</th>
-        <th style="width:70px;text-align:center;">Action</th>
-        <th style="width:56px;text-align:center;font-size:9px;">Picked Up</th>
-        <th style="width:80px;font-size:9px;">Remarks</th>
+        <th style="width:26px;text-align:center;">#</th>
+        <th style="width:50px;">Photo</th>
+        <th>Product</th>
+        <th style="width:80px;">Placement</th>
+        <th style="width:120px;">Reason for Return</th>
+        <th style="width:64px;text-align:center;">Action</th>
+        <th style="width:52px;text-align:center;font-size:9px;">Picked Up</th>
       </tr>
     </thead>`;
 
