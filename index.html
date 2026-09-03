@@ -1737,7 +1737,7 @@ function renderReturnPickupModal(){
         ${img?`<img src="${img}" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:.5px solid #ddd;flex-shrink:0;"/>`:`<div style="width:34px;height:34px;border:.5px dashed #ccc;border-radius:4px;flex-shrink:0;"></div>`}
         <span style="flex:1;min-width:0;">
           <span style="display:block;font-size:13px;font-weight:600;color:#1a1a18;">${esc(p.name||"Unnamed product")}</span>
-          <span style="display:block;font-size:11px;color:#888;margin-top:1px;">No. ${esc(p.productNo||"—")}${p.area?" · "+esc(p.area):""}</span>
+          <span style="display:block;font-size:11px;color:#888;margin-top:1px;">No. ${esc(p.productNo||"—")}${p.dimensions?" · "+esc(p.dimensions):""}${p.area?" · "+esc(p.area):""}</span>
         </span>
       </label>
       <div id="rp-detail-${p.id}" style="display:${sel.selected?"flex":"none"};gap:8px;margin-top:8px;padding-left:52px;flex-wrap:wrap;">
@@ -1813,13 +1813,14 @@ window.generateReturnPickupPDF=function(){
 function buildReturnPickupPDF(items){
   const {clientName,quoteNo,projectName,clientAddress,clientPhone,date,revision}=project;
 
-  // Rows are meaningfully taller now that each one carries a thumbnail —
-  // roughly half as many fit per page as a plain-text row would. Kept
-  // deliberately conservative, the same way the Delivery Checklist and
-  // Product Summary pagination were tuned, so a large return batch never
-  // gets silently clipped off the bottom of a page.
-  const ROWS_PER_PAGE_1=11;
-  const ROWS_PER_PAGE=14;
+  // Rows are meaningfully taller now that each one carries a thumbnail
+  // plus up to 4 lines of text (name, number+dimensions, description) —
+  // fewer fit per page than a plain-text row would. Kept deliberately
+  // conservative, the same way the Delivery Checklist and Product Summary
+  // pagination were tuned, so a large return batch never gets silently
+  // clipped off the bottom of a page.
+  const ROWS_PER_PAGE_1=9;
+  const ROWS_PER_PAGE=12;
   const pages=[];
   let remaining=[...items];
   pages.push(remaining.splice(0,ROWS_PER_PAGE_1));
@@ -1836,7 +1837,7 @@ function buildReturnPickupPDF(items){
       </td>
       <td style="font-size:11px;vertical-align:middle;">
         <div style="font-weight:600;">${esc(it.product.name||"—")}</div>
-        <div style="font-size:9.5px;color:#888;margin-top:1px;">No. ${esc(it.product.productNo||"—")}</div>
+        <div style="font-size:9.5px;color:#888;margin-top:1px;">No. ${esc(it.product.productNo||"—")} &nbsp;·&nbsp; ${esc(it.product.dimensions||"—")}</div>
         ${it.product.details?`<div style="font-size:9px;color:#888;font-style:italic;margin-top:1px;">${escNL(it.product.details)}</div>`:""}
       </td>
       <td style="font-size:10px;color:#555;vertical-align:middle;">${esc(it.product.area||"—")}</td>
