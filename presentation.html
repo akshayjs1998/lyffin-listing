@@ -69,7 +69,8 @@
   .stagebar .zoom{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); }
   .stagebar input[type=range]{ width:130px; }
 
-  #sheets{ zoom:0.68; }
+  #sheets{ transform-origin:top left; }
+  #sheets-wrap{ position:relative; }
   .page{ width:210mm; height:297mm; background:var(--paper); margin:0 auto 22px;
     position:relative; overflow:hidden; box-shadow:0 6px 26px rgba(0,0,0,.16);
     -webkit-print-color-adjust:exact; print-color-adjust:exact; }
@@ -130,7 +131,8 @@
     html,body{ background:#fff; }
     .panel, .stagebar{ display:none !important; }
     .stage{ padding:0; overflow:visible; }
-    #sheets{ zoom:1; }
+    #sheets{ transform:none !important; }
+    #sheets-wrap{ width:auto !important; height:auto !important; }
     .page{ margin:0; box-shadow:none; page-break-after:always; break-after:page; }
     .page:last-child{ page-break-after:auto; }
     .ph-missing{ display:none; }
@@ -224,6 +226,7 @@
       <span style="font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;">Preview</span>
       <span class="zoom">Zoom <input type="range" id="zoom" min="40" max="100" value="68"><span id="zoomv">68%</span></span>
     </div>
+    <div id="sheets-wrap">
     <div id="sheets">
       <section class="page cover">
         <div class="pad">
@@ -273,6 +276,7 @@
         </div>
         <div class="rfoot"><span data-p="footerLeft"></span><span data-p="ref"></span></div>
       </section>
+    </div>
     </div>
   </div>
 </div>
@@ -516,6 +520,8 @@ function render(){
   }).join("");
 
   document.getElementById("notesOut").innerHTML=(state.notes||"").trim()?esc(state.notes).replace(/\n/g,"<br>"):'<span class="ph-missing">[ notes ]</span>';
+  applyZoom(); // page count can change (drawings added/removed) — keep the
+               // scaled preview wrapper's size in sync with the new content
 }
 
 /* ---- project save / open ---- */
@@ -542,14 +548,33 @@ document.getElementById("openJson").addEventListener("change", e=>{
   r.readAsText(f);
 });
 
-/* ---- zoom ---- */
+/* ---- zoom ----
+   Uses transform:scale instead of the non-standard zoom property. zoom
+   affects layout the same way font-size does, and — even though the
+   print media query resets it to 1 — that reset has shown up unreliably
+   in testing, with page content bleeding across sheet boundaries in the
+   actual print output. transform is purely a post-layout visual effect,
+   so it can never influence where page breaks land, removing that
+   category of bug entirely. Since transform doesn't reflow the layout
+   the way zoom did, the wrapper's own size is set manually here to match
+   the visually scaled content, so the scrollable preview area doesn't
+   reserve extra blank space below the shrunk pages. */
 const zoom=document.getElementById("zoom");
-zoom.addEventListener("input",()=>{ document.getElementById("sheets").style.zoom=zoom.value/100; document.getElementById("zoomv").textContent=zoom.value+"%"; });
+function applyZoom(){
+  const factor=zoom.value/100;
+  const sheets=document.getElementById("sheets");
+  const wrap=document.getElementById("sheets-wrap");
+  sheets.style.transform="scale("+factor+")";
+  wrap.style.width=(sheets.offsetWidth*factor)+"px";
+  wrap.style.height=(sheets.offsetHeight*factor)+"px";
+  document.getElementById("zoomv").textContent=zoom.value+"%";
+}
+zoom.addEventListener("input", applyZoom);
 
 /* ---- init ---- */
 function buildAll(){ buildList("dimList",state.dims,dimCols); buildList("matList",state.materials,matCols); buildList("legList",state.legend,legCols); buildDrawings(); }
 bindSimple(); buildAll(); render();
-document.getElementById("sheets").style.zoom=zoom.value/100;
+applyZoom();
 </script>
 </body>
 </html>
