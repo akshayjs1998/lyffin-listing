@@ -412,21 +412,39 @@ function moveProductToArea(id, val) {
   renderProducts();
   renderDetail();
 }
-function trackRevisionChange(val){
-  const prev = project.revision;
+// Revision number is just a plain field now — no hidden side effects when
+// it changes. Saving a revision entry is now its own explicit action (see
+// saveRevisionEntry below), which is what actually fixes the old bug: a
+// note used to only get saved if the number ALSO happened to change in
+// the same moment, so typing a note without touching the number silently
+// lost it.
+function updateRevisionNumber(val){
   project.revision = val;
-  if (val && val !== prev) {
-    const note = project._pendingRevNote || '';
-    if (!project.revisionHistory) project.revisionHistory = [];
-    project.revisionHistory.push({rev: val, note, at: new Date().toISOString()});
-    project._pendingRevNote = '';
-    autosaveProject();
-    renderProject(); // the note was saving correctly before, but the visible
-                      // Revision history list never refreshed to show it —
-                      // this is what actually makes it appear on screen.
+  autosaveProject();
+}
+
+function saveRevisionEntry(){
+  const ta = document.getElementById('rev-note-input');
+  const rawLines = (ta.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!rawLines.length){
+    showToast('Add at least one point describing what changed');
     return;
   }
+  if(!project.revisionHistory) project.revisionHistory = [];
+  project.revisionHistory.push({rev: project.revision||'1', points: rawLines, at: new Date().toISOString()});
+  ta.value = '';
   autosaveProject();
+  renderProject();
+  showToast('Revision entry saved');
+}
+
+// Reads either the new points array or, for entries saved before this
+// change, falls back to the old single "note" string — so history saved
+// under the previous version still displays correctly.
+function revisionEntryPoints(entry){
+  if(entry.points && entry.points.length) return entry.points;
+  if(entry.note) return [entry.note];
+  return [];
 }
 function setField(id,f,v){const p=products.find(x=>x.id===id);if(p){p[f]=v;if(f==="area"&&v&&!usedAreas.includes(v))usedAreas.push(v);autosaveProject();}}
 function setFinish(id,i,v){const p=products.find(x=>x.id===id);if(p){if(!p.finishes)p.finishes=[];p.finishes[i]=v;autosaveProject();}}
@@ -808,8 +826,9 @@ ${productPages}
   ${(function(){
     const hist=project.revisionHistory||[];
     const last=hist.length?hist[hist.length-1]:null;
-    if(!last||!last.note) return "";
-    return `<div style="border:1px solid #e0c988;background:#fdf6e3;border-radius:4px;padding:6px 10px;font-size:10px;color:#555;margin-bottom:2px;"><b style="color:#111;">Rev ${esc(revision||"1")} note:</b> ${esc(last.note)}</div>`;
+    const pts=last?revisionEntryPoints(last):[];
+    if(!pts.length) return "";
+    return `<div style="border:1px solid #e0c988;background:#fdf6e3;border-radius:4px;padding:6px 10px;font-size:10px;color:#555;margin-bottom:2px;"><b style="color:#111;">Rev ${esc(revision||"1")} — what changed:</b><ul style="margin:3px 0 0 14px;padding:0;">${pts.map(pt=>`<li>${esc(pt)}</li>`).join("")}</ul></div>`;
   })()}
   <table class="stbl">
     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Placement</th><th>Dimensions</th><th>Finish</th><th>Upholstery</th></tr></thead>
@@ -903,10 +922,24 @@ function renderProjectInto(c){
     <div style="font-size:11px;color:var(--text2);margin-top:4px">${(function(){const f=computeFactoryDueDate(project.dueDate,project.bufferDays);return f?`Factory copy will show: ${f}`:'Set a due date above to see the factory date';})()}</div>
   </div>
 </div>
-<div style="margin-top:12px;max-width:120px;">
-  <div class="field"><label>Revision no.</label><input type="text" id="rev-input" value="${esc(project.revision||'1')}" placeholder="1" oninput="trackRevisionChange(this.value);"/></div>
-      <div class="field"><label>Revision note <span style="font-size:10px;color:var(--text2);font-weight:400">(what changed in this revision)</span></label><input type="text" id="rev-note-input" value="" placeholder="e.g. Updated fabric for bedroom wardrobe" oninput="project._pendingRevNote=this.value;"/></div>
-      ${(project.revisionHistory&&project.revisionHistory.length)?`<div style="margin-top:6px;"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Revision history</div>${project.revisionHistory.slice().reverse().map(r=>`<div style="font-size:11px;color:var(--text2);padding:5px 0;border-bottom:.5px solid var(--border2)"><span style="color:var(--text);font-weight:500">Rev ${r.rev}</span> · ${r.note||'No note'} <span style="color:var(--text2);margin-left:4px">${new Date(r.at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span></div>`).join('')}</div>`:''}
+<div style="margin-top:12px;">
+  <div style="max-width:120px;">
+    <div class="field"><label>Revision no.</label><input type="text" id="rev-input" value="${esc(project.revision||'1')}" placeholder="1" oninput="updateRevisionNumber(this.value);"/></div>
+  </div>
+  <div style="max-width:420px;margin-top:10px;">
+    <div class="field">
+      <label>Add revision entry <span style="font-size:10px;color:var(--text2);font-weight:400">(one point per line — what changed in this revision)</span></label>
+      <textarea id="rev-note-input" rows="3" placeholder="e.g.&#10;Updated fabric for bedroom wardrobe&#10;Changed dining table dimensions to 180x90cm" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+    </div>
+    <button class="btn" onclick="saveRevisionEntry()" style="margin-top:6px;">Save revision entry</button>
+    ${(project.revisionHistory&&project.revisionHistory.length)?`<div style="margin-top:14px;">
+      <div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Revision history</div>
+      ${project.revisionHistory.slice().reverse().map(r=>`<div style="font-size:11px;color:var(--text2);padding:7px 0;border-bottom:.5px solid var(--border2)">
+        <div><span style="color:var(--text);font-weight:600">Rev ${esc(r.rev)}</span><span style="color:var(--text2);margin-left:6px">${new Date(r.at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span></div>
+        <ul style="margin:4px 0 0 16px;padding:0;">${revisionEntryPoints(r).map(pt=>`<li style="margin-bottom:2px;">${esc(pt)}</li>`).join('')||'<li style="color:var(--text2);font-style:italic;">No note recorded</li>'}</ul>
+      </div>`).join('')}
+    </div>`:''}
+  </div>
 </div></div>
 <div class="btn-row">
   <button class="btn" onclick="closeProject()">← Back to projects</button>
@@ -1125,7 +1158,8 @@ ${(function(){
   const hist=project.revisionHistory||[];
   const last=hist.length?hist[hist.length-1]:null;
   const rev=project.revision||"1";
-  return `<div style="padding:9px 13px;background:var(--info-bg);color:var(--info-text);border-radius:var(--radius);font-size:13px;margin-bottom:.75rem;"><b>Rev ${esc(rev)}</b> — ${last&&last.note?esc(last.note):"<em>No revision note recorded</em>"}</div>`;
+  const pts=last?revisionEntryPoints(last):[];
+  return `<div style="padding:9px 13px;background:var(--info-bg);color:var(--info-text);border-radius:var(--radius);font-size:13px;margin-bottom:.75rem;"><b>Rev ${esc(rev)}</b>${pts.length?`<ul style="margin:4px 0 0 16px;padding:0;">${pts.map(pt=>`<li>${esc(pt)}</li>`).join("")}</ul>`:` — <em>No revision note recorded</em>`}</div>`;
 })()}
 <div class="tbl-wrap" style="margin-bottom:1rem;"><div style="overflow-x:auto;"><table class="tbl">
   <thead><tr>${["#","Product","Qty","Area","Dimensions","Finishes","Upholstery","Photo","Annot","Drw","Swatch"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
