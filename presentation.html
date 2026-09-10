@@ -550,7 +550,7 @@ function render(){
   // Browsers use document.title as the suggested filename when saving to
   // PDF — keeping it in sync with these three fields means "Save PDF"
   // suggests the right name without anyone having to rename it by hand.
-  const nameParts=[state.title,state.client,state.ref].map(s=>(s||"").trim()).filter(Boolean);
+  const nameParts=[state.title,state.subtitle,state.ref].map(s=>(s||"").trim()).filter(Boolean);
   document.title=nameParts.length?nameParts.join("_"):"Lyffin · Presentation Drawing Generator";
   setP("tagline", ph(state.tagline,"tagline"));
   setP("coverKicker", ph(state.coverKicker,"eyebrow"));
