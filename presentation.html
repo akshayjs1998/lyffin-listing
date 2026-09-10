@@ -148,7 +148,7 @@
       <a href="index.html" style="color:#c9bfae;text-decoration:none;font-size:12px;display:flex;align-items:center;gap:4px;" title="Back to Listing Tool">← Listing Tool</a>
       <span class="mk">Lyffin</span><span style="font-size:12px;color:#c9bfae;">Presentation Drawing</span>
       <span class="sp"></span>
-      <button class="btn go" onclick="window.print()">Save PDF</button>
+      <button class="btn go" onclick="saveAndPrint()">Save PDF</button>
     </div>
     <div class="body">
 
@@ -164,6 +164,11 @@
           <div class="fld"><label>Drawing ref &amp; revision</label><input data-f="ref"></div>
           <div class="fld"><label>Units</label><input data-f="units"></div>
         </div>
+        <div style="margin-top:6px;font-size:11px;color:var(--muted);">
+          <span id="lastRefInfo"></span>
+          <a href="#" onclick="toggleDrawingLog();return false;" style="color:inherit;text-decoration:underline;margin-left:6px;">Drawing number log</a>
+        </div>
+        <div id="drawingLogPanel" style="display:none;margin-top:8px;padding:8px 10px;background:var(--hair2);border:1px solid var(--hair);border-radius:6px;font-size:11px;max-height:160px;overflow-y:auto;"></div>
       </div>
 
       <div class="grp">
@@ -327,6 +332,64 @@ if(!state.logo) state.logo = LOGO;
 
 function load(){ try{ const r=localStorage.getItem(KEY); return r?JSON.parse(r):null; }catch(e){ return null; } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ---- drawing number log ----
+   Kept separate from the main draft (a different localStorage key) since
+   this is a running record across every product drawn with this tool,
+   not just the one currently open — so switching to a new product or
+   clearing the current draft never loses the history of numbers already
+   used. A new entry is recorded each time Save PDF is used, which is the
+   natural moment a drawing number is actually put into use. */
+const LOG_KEY = "lyffin-presentation-drawing-log";
+function loadDrawingLog(){ try{ const r=localStorage.getItem(LOG_KEY); return r?JSON.parse(r):[]; }catch(e){ return []; } }
+function saveDrawingLog(log){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(log)); }catch(e){} }
+
+function recordDrawingNumber(){
+  const ref=(state.ref||"").trim();
+  if(!ref) return;
+  const log=loadDrawingLog();
+  const last=log.length?log[log.length-1]:null;
+  // Printing the same ref twice in a row (re-saving after a small tweak
+  // that didn't touch the ref itself) shouldn't create a duplicate line
+  // in the log — only an actual new/changed ref is worth recording.
+  if(last && last.ref===ref) return;
+  log.push({ref, title:(state.title||"").trim(), client:(state.client||"").trim(), at:new Date().toISOString()});
+  saveDrawingLog(log);
+}
+
+function updateLastRefInfo(){
+  const log=loadDrawingLog();
+  const el=document.getElementById("lastRefInfo");
+  if(!el) return;
+  el.textContent = log.length ? ("Last used: "+log[log.length-1].ref) : "No drawing numbers recorded yet";
+}
+
+window.toggleDrawingLog=function(){
+  const panel=document.getElementById("drawingLogPanel");
+  const opening = panel.style.display==="none";
+  panel.style.display = opening ? "block" : "none";
+  if(!opening) return;
+  const log=loadDrawingLog().slice().reverse(); // most recent first
+  if(!log.length){
+    panel.innerHTML='<div style="color:var(--muted);">No drawing numbers recorded yet — one is logged automatically the first time you use Save PDF.</div>';
+    return;
+  }
+  panel.innerHTML = log.map(e=>
+    '<div style="padding:4px 0;border-bottom:1px solid var(--hair);">'
+    +'<b>'+esc(e.ref)+'</b>'
+    +(e.title?' — '+esc(e.title):'')
+    +(e.client?' ('+esc(e.client)+')':'')
+    +'<span style="float:right;color:var(--muted);">'+new Date(e.at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+'</span>'
+    +'</div>'
+  ).join("");
+};
+
+window.saveAndPrint=function(){
+  recordDrawingNumber();
+  updateLastRefInfo();
+  window.print();
+};
+
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ph  = (v,p) => (v && String(v).trim()) ? esc(v) : '<span class="ph-missing">[ '+p+' ]</span>';
 function status(msg){ /* reserved */ }
@@ -484,6 +547,11 @@ function drawPage(d,i){
     + '</section>';
 }
 function render(){
+  // Browsers use document.title as the suggested filename when saving to
+  // PDF — keeping it in sync with these three fields means "Save PDF"
+  // suggests the right name without anyone having to rename it by hand.
+  const nameParts=[state.title,state.client,state.ref].map(s=>(s||"").trim()).filter(Boolean);
+  document.title=nameParts.length?nameParts.join("_"):"Lyffin · Presentation Drawing Generator";
   setP("tagline", ph(state.tagline,"tagline"));
   setP("coverKicker", ph(state.coverKicker,"eyebrow"));
   setP("title", ph(state.title,"Product title"));
@@ -575,6 +643,7 @@ zoom.addEventListener("input", applyZoom);
 function buildAll(){ buildList("dimList",state.dims,dimCols); buildList("matList",state.materials,matCols); buildList("legList",state.legend,legCols); buildDrawings(); }
 bindSimple(); buildAll(); render();
 applyZoom();
+updateLastRefInfo();
 </script>
 </body>
 </html>
