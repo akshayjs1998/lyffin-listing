@@ -496,7 +496,12 @@ function render(){
   document.querySelectorAll("[data-logo] img").forEach(img=> img.src=state.logo);
   document.getElementById("drawingPages").innerHTML = state.drawings.map((d,i)=>drawPage(d,i)).join("");
 
-  const rows=state.dims.map(d=>{
+  // A brand-new row defaults to unit:"cm" even before anything's typed
+  // into it — so "has content" means an actual label or value, not just
+  // the presence of that default unit. Rows with neither are left out of
+  // the printed output entirely, rather than showing as a bare "cm" with
+  // nothing else on the line.
+  const rows=state.dims.filter(d=>(d.label||"").trim()||(d.value||"").trim()).map(d=>{
     const val=(d.value||d.unit)?('<b>'+esc(d.value||"")+'</b> '+esc(d.unit||"")).trim():'<span class="ph-missing">[ value ]</span>';
     return '<tr><td class="lab">'+ph(d.label,"dimension")+'</td><td class="val">'+val+'</td></tr>';
   });
@@ -504,7 +509,7 @@ function render(){
   document.getElementById("dimColA").innerHTML=rows.slice(0,half).join("");
   document.getElementById("dimColB").innerHTML=rows.slice(half).join("");
 
-  document.getElementById("matOut").innerHTML=state.materials.map(m=>{
+  document.getElementById("matOut").innerHTML=state.materials.filter(m=>(m.label||"").trim()||(m.value||"").trim()).map(m=>{
     const tbc=/to be confirmed/i.test(m.value||"");
     const val=(m.value||"").trim()?'<span class="'+(tbc?"tbc":"")+'">'+esc(m.value)+'</span>':'<span class="ph-missing">[ spec ]</span>';
     return '<tr><td class="lab">'+ph(m.label,"item")+'</td><td class="val">'+val+'</td></tr>';
