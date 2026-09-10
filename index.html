@@ -871,6 +871,9 @@ function renderHome(){
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
     <div class="panel-title" style="margin-bottom:0;font-size:16px;">Projects</div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <a href="presentation.html" class="btn sm" style="text-decoration:none;" title="Standalone client-facing presentation drawing generator — separate from this listing">
+        🎨 Presentation Drawing
+      </a>
       <label class="btn sm" style="cursor:pointer;margin:0;" title="Import a .lyffin project file shared by a colleague">
         📥 Import project
         <input type="file" accept=".lyffin,.json" style="display:none;" onchange="if(this.files[0])importProject(this.files[0])"/>
@@ -891,7 +894,7 @@ function renderHome(){
         <div class="proj-card-meta">${p.meta?esc(p.meta)+" · ":""}</div>
         <div class="proj-card-meta" style="margin-top:2px;font-size:11px;color:var(--text3);">
           ${p.products?p.products.length+" products · ":""}
-          ${p.project?.revision?"Rev "+p.project.revision+" · ":""}
+          ${(p.project && p.project.revision)?"Rev "+p.project.revision+" · ":""}
           ${p.updatedAt?"Last saved "+new Date(p.updatedAt).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}):""}</div>
       </div>
       <div class="proj-card-actions" onclick="event.stopPropagation()">
