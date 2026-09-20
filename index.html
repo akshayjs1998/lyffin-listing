@@ -781,24 +781,32 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#111;background:#fff;}
 
 @media(max-width:900px), (hover:none) and (pointer:coarse){
   .app{padding-bottom:2.5rem;}
-  #products-layout{grid-template-columns:1fr!important;}
+  /* Every level of the container chain gets an explicit width ceiling —
+     this is what actually matters here. Without it, a flex/grid child
+     can silently grow past its parent's width in ways that are easy to
+     miss, and that growth is exactly what was defeating the scroll
+     container below: if any ancestor is even slightly wider than the
+     screen, the browser has no clean edge to scroll from. */
+  #products-layout{display:flex!important;flex-direction:column!important;gap:14px;width:100%!important;max-width:100%!important;min-width:0!important;}
+  #products-layout > div{width:100%!important;max-width:100%!important;min-width:0!important;}
   .detail{display:none;position:fixed;inset:0;z-index:200;overflow-y:auto;border-radius:0!important;border:none!important;max-height:100vh!important;padding:1rem!important;}
   .detail.mobile-open{display:block!important;}
   #detail-close-btn{display:block!important;}
-  .tbl .mobile-hide{display:none}
-  /* Converts the products table into stacked cards entirely — every
-     table-related element becomes a plain block, so there's no table
-     layout algorithm left at all on mobile. Nothing here can overflow
-     sideways no matter how many columns exist or how wide their content
-     is, since rows simply stack vertically like any other block content. */
-  .tbl-wrap{border:none;}
-  .tbl{display:block;}
-  .tbl thead{display:none;}
-  .tbl tbody{display:block;}
-  .tbl tr{display:block;background:var(--bg);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;margin-bottom:8px;}
-  .tbl tr.active-row{background:var(--info-bg);}
-  .tbl td{display:block;border:none;padding:4px 0;}
-  .tbl td[data-label]:before{content:attr(data-label) ": ";font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px;}
+  .tbl-wrap{width:100%!important;max-width:100%!important;min-width:0!important;}
+  /* The actual scroll container: pinned to the screen's width, with the
+     two properties that make touch-scrolling reliable on mobile browsers
+     specifically — -webkit-overflow-scrolling gives it proper momentum
+     instead of janky/unresponsive scrolling, and touch-action explicitly
+     allows both scroll directions here regardless of anything set
+     elsewhere on the page. */
+  .tbl-wrap > div{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-x pan-y!important;}
+  .tbl-wrap > div::-webkit-scrollbar{height:6px;}
+  .tbl-wrap > div::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+  /* A fixed pixel floor rather than a percentage — this guarantees the
+     table always has genuine room for all its columns, so it reliably
+     overflows its now width-capped container and the scrollbar always
+     has something real to scroll to. */
+  .tbl{min-width:840px!important;width:auto!important;}
 }
 @media print{
   body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
