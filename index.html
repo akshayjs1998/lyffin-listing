@@ -786,6 +786,19 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#111;background:#fff;}
   .detail.mobile-open{display:block!important;}
   #detail-close-btn{display:block!important;}
   .tbl .mobile-hide{display:none}
+  /* Converts the products table into stacked cards entirely — every
+     table-related element becomes a plain block, so there's no table
+     layout algorithm left at all on mobile. Nothing here can overflow
+     sideways no matter how many columns exist or how wide their content
+     is, since rows simply stack vertically like any other block content. */
+  .tbl-wrap{border:none;}
+  .tbl{display:block;}
+  .tbl thead{display:none;}
+  .tbl tbody{display:block;}
+  .tbl tr{display:block;background:var(--bg);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;margin-bottom:8px;}
+  .tbl tr.active-row{background:var(--info-bg);}
+  .tbl td{display:block;border:none;padding:4px 0;}
+  .tbl td[data-label]:before{content:attr(data-label) ": ";font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px;}
 }
 @media print{
   body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -1046,9 +1059,9 @@ function renderTableRows(){
   onclick="selectAndDetail('${p.id}')" 
   style="cursor:pointer;">
   <td class="mobile-hide" style="padding:2px 4px;cursor:grab;color:var(--text3);font-size:14px;text-align:center;" onclick="event.stopPropagation()" title="Drag to reorder">⠿</td>
-  <td><input type="text" style="width:34px;padding:3px 4px;font-size:12px;" value="${esc(p.productNo)}" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=!IS_TOUCH_DEVICE" oninput="setField('${p.id}','productNo',this.value)"/></td>
-  <td><input type="text" style="padding:3px 5px;font-size:12px;width:100%;" value="${esc(p.name)}" placeholder="Product name" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=!IS_TOUCH_DEVICE;checkDuplicateProduct('${p.id}')" oninput="setField('${p.id}','name',this.value)"/></td>
-  <td><input type="number" style="width:36px;padding:3px 4px;font-size:12px;text-align:center;" min="1" value="${p.qty}" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=!IS_TOUCH_DEVICE" oninput="setField('${p.id}','qty',parseInt(this.value)||1)"/></td>
+  <td data-label="#"><input type="text" style="width:34px;padding:3px 4px;font-size:12px;" value="${esc(p.productNo)}" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=!IS_TOUCH_DEVICE" oninput="setField('${p.id}','productNo',this.value)"/></td>
+  <td data-label="Product name"><input type="text" style="padding:3px 5px;font-size:12px;width:100%;" value="${esc(p.name)}" placeholder="Product name" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=!IS_TOUCH_DEVICE;checkDuplicateProduct('${p.id}')" oninput="setField('${p.id}','name',this.value)"/></td>
+  <td data-label="Qty"><input type="number" style="width:36px;padding:3px 4px;font-size:12px;text-align:center;" min="1" value="${p.qty}" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=!IS_TOUCH_DEVICE" oninput="setField('${p.id}','qty',parseInt(this.value)||1)"/></td>
   <td class="mobile-hide"><div class="area-wrap"><input type="text" id="area-inp-${p.id}" style="padding:3px 5px;font-size:12px;" value="${esc(p.area)}" placeholder="e.g. Sitout" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" oninput="setField('${p.id}','area',this.value);showAreaSuggestions('${p.id}',this.value)" onblur="hideAreaSuggestions('${p.id}');this.closest('tr').draggable=!IS_TOUCH_DEVICE"/><div id="area-sug-${p.id}" class="area-suggestions" style="display:none;"></div></div></td>
   <td class="mobile-hide"><input type="text" style="padding:3px 5px;font-size:12px;" value="${esc(p.dimensions)}" placeholder="120 x 60 cm" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=!IS_TOUCH_DEVICE" oninput="setField('${p.id}','dimensions',this.value)"/></td>
   <td class="mobile-hide"><textarea rows="1" style="padding:3px 5px;font-size:12px;width:100%;resize:vertical;font-family:inherit;line-height:1.4;min-height:24px;" placeholder="e.g. Glass top, hinge type" onclick="event.stopPropagation()" onfocus="this.closest('tr').draggable=false" onblur="this.closest('tr').draggable=!IS_TOUCH_DEVICE" oninput="setField('${p.id}','details',this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'">${esc(p.details)}</textarea></td>
