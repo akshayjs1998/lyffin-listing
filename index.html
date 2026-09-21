@@ -793,13 +793,15 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#111;background:#fff;}
   .detail.mobile-open{display:block!important;}
   #detail-close-btn{display:block!important;}
   .tbl-wrap{width:100%!important;max-width:100%!important;min-width:0!important;}
-  /* The actual scroll container: pinned to the screen's width, with the
-     two properties that make touch-scrolling reliable on mobile browsers
-     specifically — -webkit-overflow-scrolling gives it proper momentum
-     instead of janky/unresponsive scrolling, and touch-action explicitly
-     allows both scroll directions here regardless of anything set
-     elsewhere on the page. */
-  .tbl-wrap > div{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-x pan-y!important;}
+  /* The scroll container: pinned to the screen's width. overflow-x:auto
+     is what makes setting scrollLeft in JS actually move anything —
+     without it this element isn't a scroll container at all. touch-action
+     is deliberately pan-y only, not pan-x pan-y: horizontal panning is
+     now handled entirely by enableManualTouchScroll() in JS (see below),
+     and leaving pan-x here would tell the browser to also try handling
+     it natively at the same time, fighting the manual handler for the
+     same gesture. Vertical page scrolling stays completely native. */
+  .tbl-wrap > div{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;}
   .tbl-wrap > div::-webkit-scrollbar{height:6px;}
   .tbl-wrap > div::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
   /* A fixed pixel floor rather than a percentage — this guarantees the
