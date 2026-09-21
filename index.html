@@ -989,7 +989,9 @@ function enableManualTouchScroll(el){
   // the single most important number here: if scrollWidth isn't actually
   // bigger than clientWidth, nothing can ever scroll no matter what we
   // set scrollLeft to, regardless of any touch-handling code at all.
+  const widthReport = 'ON LOAD:\ntable scrollWidth = '+el.scrollWidth+'\ncontainer clientWidth = '+el.clientWidth+'\ntable wider than container? '+(el.scrollWidth>el.clientWidth)+'\n\nwindow.innerWidth = '+window.innerWidth+'\ndocument.documentElement.clientWidth = '+document.documentElement.clientWidth;
   setDbg('on load — table scrollWidth='+el.scrollWidth+', container clientWidth='+el.clientWidth+', table IS wider than container='+(el.scrollWidth>el.clientWidth));
+  setTimeout(()=>alert(widthReport), 400);
   el.addEventListener('touchstart', e=>{
     if(e.touches.length!==1) return;
     dragging=true; lockedDir=null; moveCount=0;
