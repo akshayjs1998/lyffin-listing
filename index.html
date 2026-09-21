@@ -59,6 +59,7 @@ input:focus,textarea:focus{border-color:#555;}
 .btn.danger{background:var(--danger-bg);color:var(--danger-text);border-color:var(--danger-border);}
 .btn.sm{padding:4px 10px;font-size:12px;}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem;}
+.products-layout-grid{display:grid;grid-template-columns:1fr 320px;gap:12px;}
 .tbl-wrap{border:.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
 .tbl{min-width:100%;border-collapse:collapse;font-size:12px;}
 .tbl th{background:var(--bg2);padding:7px 8px;text-align:left;font-weight:500;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;border-bottom:.5px solid var(--border);white-space:nowrap;}
@@ -1010,7 +1011,9 @@ function enableManualTouchScroll(el){
   // set scrollLeft to, regardless of any touch-handling code at all.
   const layoutEl = document.getElementById('products-layout');
   const layoutStyle = layoutEl ? getComputedStyle(layoutEl) : null;
-  const widthReport = 'ON LOAD:\ntable scrollWidth = '+el.scrollWidth+'\ncontainer clientWidth = '+el.clientWidth+'\ntable wider than container? '+(el.scrollWidth>el.clientWidth)+'\n\nwindow.innerWidth = '+window.innerWidth+'\ndocument.documentElement.clientWidth = '+document.documentElement.clientWidth+'\n\nmatchMedia(max-width:900px) = '+window.matchMedia('(max-width:900px)').matches+'\nmatchMedia(hover:none)and(pointer:coarse) = '+window.matchMedia('(hover:none) and (pointer:coarse)').matches+'\nmatchMedia COMBINED comma-syntax = '+window.matchMedia('(max-width:900px), (hover:none) and (pointer:coarse)').matches+'\n\n#products-layout computed display = '+(layoutStyle?layoutStyle.display:'NOT FOUND')+'\n#products-layout computed grid-template-columns = '+(layoutStyle?layoutStyle.gridTemplateColumns:'N/A');
+  const appEl = document.querySelector('.app');
+  const appStyle = appEl ? getComputedStyle(appEl) : null;
+  const widthReport = 'ON LOAD:\ntable scrollWidth = '+el.scrollWidth+'\ncontainer clientWidth = '+el.clientWidth+'\ntable wider than container? '+(el.scrollWidth>el.clientWidth)+'\n\nwindow.innerWidth = '+window.innerWidth+'\ndocument.documentElement.clientWidth = '+document.documentElement.clientWidth+'\n\nmatchMedia(max-width:900px) = '+window.matchMedia('(max-width:900px)').matches+'\n\n.app computed padding-bottom = '+(appStyle?appStyle.paddingBottom:'N/A')+' (expect 40px if the media block works at all)\n\n#products-layout INLINE style.display = '+(layoutEl?layoutEl.style.display:'N/A')+'\n#products-layout INLINE style.gridTemplateColumns = '+(layoutEl?layoutEl.style.gridTemplateColumns:'N/A')+'\n#products-layout COMPUTED display = '+(layoutStyle?layoutStyle.display:'NOT FOUND')+'\n#products-layout COMPUTED grid-template-columns = '+(layoutStyle?layoutStyle.gridTemplateColumns:'N/A')+'\n\nlayoutEl.id = '+(layoutEl?layoutEl.id:'N/A')+'\nlayoutEl.tagName = '+(layoutEl?layoutEl.tagName:'N/A');
   setDbg('on load — table scrollWidth='+el.scrollWidth+', container clientWidth='+el.clientWidth+', table IS wider than container='+(el.scrollWidth>el.clientWidth));
   setTimeout(()=>alert(widthReport), 400);
   el.addEventListener('touchstart', e=>{
@@ -1047,7 +1050,7 @@ function enableManualTouchScroll(el){
 function renderProducts(){const c=document.getElementById("page-content");if(c)renderProductsInto(c);}
 function renderProductsInto(c){
   c.innerHTML=`
-<div id="products-layout" style="display:grid;grid-template-columns:1fr 320px;gap:12px;">
+<div id="products-layout" class="products-layout-grid">
   <div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
       <div style="font-size:14px;font-weight:600;">${products.length} products <span style="font-size:12px;font-weight:400;color:var(--text2);">· ${totalPieces()} pieces</span></div>
