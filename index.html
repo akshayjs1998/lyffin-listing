@@ -779,7 +779,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#111;background:#fff;}
 .sn{font-size:24px;font-weight:700;}
 .sl{font-size:9px;color:#888;text-transform:uppercase;}
 
-@media(max-width:900px), (hover:none) and (pointer:coarse){
+@media(max-width:900px){
   .app{padding-bottom:2.5rem;}
   /* Every level of the container chain gets an explicit width ceiling —
      this is what actually matters here. Without it, a flex/grid child
@@ -808,6 +808,25 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#111;background:#fff;}
      table always has genuine room for all its columns, so it reliably
      overflows its now width-capped container and the scrollbar always
      has something real to scroll to. */
+  .tbl{min-width:840px!important;width:auto!important;}
+}
+/* Duplicated as its own separate, single-condition block rather than
+   combined with the one above via a comma — a device was found where
+   the media query condition tested true in JavaScript on both halves
+   individually, yet the combined comma-joined rule still wasn't being
+   applied to the page at all. Splitting into two independent blocks
+   removes any ambiguity in how that combined syntax gets parsed. */
+@media(hover:none) and (pointer:coarse){
+  .app{padding-bottom:2.5rem;}
+  #products-layout{display:flex!important;flex-direction:column!important;gap:14px;width:100%!important;max-width:100%!important;min-width:0!important;}
+  #products-layout > div{width:100%!important;max-width:100%!important;min-width:0!important;}
+  .detail{display:none;position:fixed;inset:0;z-index:200;overflow-y:auto;border-radius:0!important;border:none!important;max-height:100vh!important;padding:1rem!important;}
+  .detail.mobile-open{display:block!important;}
+  #detail-close-btn{display:block!important;}
+  .tbl-wrap{width:100%!important;max-width:100%!important;min-width:0!important;}
+  .tbl-wrap > div{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;}
+  .tbl-wrap > div::-webkit-scrollbar{height:6px;}
+  .tbl-wrap > div::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
   .tbl{min-width:840px!important;width:auto!important;}
 }
 @media print{
@@ -991,7 +1010,7 @@ function enableManualTouchScroll(el){
   // set scrollLeft to, regardless of any touch-handling code at all.
   const layoutEl = document.getElementById('products-layout');
   const layoutStyle = layoutEl ? getComputedStyle(layoutEl) : null;
-  const widthReport = 'ON LOAD:\ntable scrollWidth = '+el.scrollWidth+'\ncontainer clientWidth = '+el.clientWidth+'\ntable wider than container? '+(el.scrollWidth>el.clientWidth)+'\n\nwindow.innerWidth = '+window.innerWidth+'\ndocument.documentElement.clientWidth = '+document.documentElement.clientWidth+'\n\nmatchMedia(max-width:900px) = '+window.matchMedia('(max-width:900px)').matches+'\nmatchMedia(hover:none)and(pointer:coarse) = '+window.matchMedia('(hover:none) and (pointer:coarse)').matches+'\n\n#products-layout computed display = '+(layoutStyle?layoutStyle.display:'NOT FOUND')+'\n#products-layout computed grid-template-columns = '+(layoutStyle?layoutStyle.gridTemplateColumns:'N/A');
+  const widthReport = 'ON LOAD:\ntable scrollWidth = '+el.scrollWidth+'\ncontainer clientWidth = '+el.clientWidth+'\ntable wider than container? '+(el.scrollWidth>el.clientWidth)+'\n\nwindow.innerWidth = '+window.innerWidth+'\ndocument.documentElement.clientWidth = '+document.documentElement.clientWidth+'\n\nmatchMedia(max-width:900px) = '+window.matchMedia('(max-width:900px)').matches+'\nmatchMedia(hover:none)and(pointer:coarse) = '+window.matchMedia('(hover:none) and (pointer:coarse)').matches+'\nmatchMedia COMBINED comma-syntax = '+window.matchMedia('(max-width:900px), (hover:none) and (pointer:coarse)').matches+'\n\n#products-layout computed display = '+(layoutStyle?layoutStyle.display:'NOT FOUND')+'\n#products-layout computed grid-template-columns = '+(layoutStyle?layoutStyle.gridTemplateColumns:'N/A');
   setDbg('on load — table scrollWidth='+el.scrollWidth+', container clientWidth='+el.clientWidth+', table IS wider than container='+(el.scrollWidth>el.clientWidth));
   setTimeout(()=>alert(widthReport), 400);
   el.addEventListener('touchstart', e=>{
