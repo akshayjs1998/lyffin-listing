@@ -985,6 +985,11 @@ function enableManualTouchScroll(el){
   let startX=0, startY=0, startScrollLeft=0, dragging=false, lockedDir=null, moveCount=0;
   const dbg = document.getElementById('touch-debug');
   const setDbg = (msg) => { if(dbg) dbg.textContent = 'Touch debug: ' + msg; };
+  // Show this the instant the page renders, before any touch — this is
+  // the single most important number here: if scrollWidth isn't actually
+  // bigger than clientWidth, nothing can ever scroll no matter what we
+  // set scrollLeft to, regardless of any touch-handling code at all.
+  setDbg('on load — table scrollWidth='+el.scrollWidth+', container clientWidth='+el.clientWidth+', table IS wider than container='+(el.scrollWidth>el.clientWidth));
   el.addEventListener('touchstart', e=>{
     if(e.touches.length!==1) return;
     dragging=true; lockedDir=null; moveCount=0;
