@@ -989,7 +989,9 @@ function enableManualTouchScroll(el){
   // the single most important number here: if scrollWidth isn't actually
   // bigger than clientWidth, nothing can ever scroll no matter what we
   // set scrollLeft to, regardless of any touch-handling code at all.
-  const widthReport = 'ON LOAD:\ntable scrollWidth = '+el.scrollWidth+'\ncontainer clientWidth = '+el.clientWidth+'\ntable wider than container? '+(el.scrollWidth>el.clientWidth)+'\n\nwindow.innerWidth = '+window.innerWidth+'\ndocument.documentElement.clientWidth = '+document.documentElement.clientWidth;
+  const layoutEl = document.getElementById('products-layout');
+  const layoutStyle = layoutEl ? getComputedStyle(layoutEl) : null;
+  const widthReport = 'ON LOAD:\ntable scrollWidth = '+el.scrollWidth+'\ncontainer clientWidth = '+el.clientWidth+'\ntable wider than container? '+(el.scrollWidth>el.clientWidth)+'\n\nwindow.innerWidth = '+window.innerWidth+'\ndocument.documentElement.clientWidth = '+document.documentElement.clientWidth+'\n\nmatchMedia(max-width:900px) = '+window.matchMedia('(max-width:900px)').matches+'\nmatchMedia(hover:none)and(pointer:coarse) = '+window.matchMedia('(hover:none) and (pointer:coarse)').matches+'\n\n#products-layout computed display = '+(layoutStyle?layoutStyle.display:'NOT FOUND')+'\n#products-layout computed grid-template-columns = '+(layoutStyle?layoutStyle.gridTemplateColumns:'N/A');
   setDbg('on load — table scrollWidth='+el.scrollWidth+', container clientWidth='+el.clientWidth+', table IS wider than container='+(el.scrollWidth>el.clientWidth));
   setTimeout(()=>alert(widthReport), 400);
   el.addEventListener('touchstart', e=>{
