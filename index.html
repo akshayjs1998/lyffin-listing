@@ -967,6 +967,43 @@ function renderProjectInto(c){
 </div>`;
 }
 
+// Manual touch-drag-to-scroll for the products table. Native browser
+// horizontal scrolling has proven unreliable for this specific page on
+// at least one real device, even with otherwise-correct CSS — this
+// bypasses the browser's own scroll-gesture recognition entirely by
+// reading raw touch coordinates and moving the container's scroll
+// position directly in JavaScript, so it doesn't depend on whatever
+// native scroll behavior may or may not be functioning in a given
+// browser session. A horizontal drag is distinguished from a vertical
+// one by which direction the finger actually moves first, so normal
+// vertical page scrolling is left completely untouched.
+function enableManualTouchScroll(el){
+  if(!el || el._manualScrollBound) return;
+  el._manualScrollBound = true;
+  let startX=0, startY=0, startScrollLeft=0, dragging=false, lockedDir=null;
+  el.addEventListener('touchstart', e=>{
+    if(e.touches.length!==1) return;
+    dragging=true; lockedDir=null;
+    startX=e.touches[0].clientX;
+    startY=e.touches[0].clientY;
+    startScrollLeft=el.scrollLeft;
+  }, {passive:true});
+  el.addEventListener('touchmove', e=>{
+    if(!dragging||e.touches.length!==1) return;
+    const dx=e.touches[0].clientX-startX;
+    const dy=e.touches[0].clientY-startY;
+    if(lockedDir===null && (Math.abs(dx)>4||Math.abs(dy)>4)){
+      lockedDir = Math.abs(dx)>Math.abs(dy) ? 'x' : 'y';
+    }
+    if(lockedDir==='x'){
+      if(e.cancelable) e.preventDefault();
+      el.scrollLeft = startScrollLeft - dx;
+    }
+  }, {passive:false});
+  el.addEventListener('touchend', ()=>{dragging=false;lockedDir=null;}, {passive:true});
+  el.addEventListener('touchcancel', ()=>{dragging=false;lockedDir=null;}, {passive:true});
+}
+
 function renderProducts(){const c=document.getElementById("page-content");if(c)renderProductsInto(c);}
 function renderProductsInto(c){
   c.innerHTML=`
@@ -979,7 +1016,7 @@ function renderProductsInto(c){
         <button class="btn primary" onclick="saveCurrentProject();goStep(2);">Review →</button>
       </div>
     </div>
-    <div class="tbl-wrap"><div style="overflow-x:auto;">
+    <div class="tbl-wrap"><div id="prod-scroll-container" style="overflow-x:auto;">
       <table class="tbl"><thead><tr>
         <th style="width:24px" class="mobile-hide"></th>
         <th style="width:44px">#</th>
@@ -1009,6 +1046,7 @@ function renderProductsInto(c){
   </div>
 </div>`;
   renderTableRows();
+  enableManualTouchScroll(document.getElementById('prod-scroll-container'));
   if(selectedId)renderDetail();
 }
 
