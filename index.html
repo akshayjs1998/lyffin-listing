@@ -982,16 +982,20 @@ function renderProjectInto(c){
 function enableManualTouchScroll(el){
   if(!el || el._manualScrollBound) return;
   el._manualScrollBound = true;
-  let startX=0, startY=0, startScrollLeft=0, dragging=false, lockedDir=null;
+  let startX=0, startY=0, startScrollLeft=0, dragging=false, lockedDir=null, moveCount=0;
+  const dbg = document.getElementById('touch-debug');
+  const setDbg = (msg) => { if(dbg) dbg.textContent = 'Touch debug: ' + msg; };
   el.addEventListener('touchstart', e=>{
     if(e.touches.length!==1) return;
-    dragging=true; lockedDir=null;
+    dragging=true; lockedDir=null; moveCount=0;
     startX=e.touches[0].clientX;
     startY=e.touches[0].clientY;
     startScrollLeft=el.scrollLeft;
+    setDbg('touchstart received at x='+Math.round(startX)+', scrollWidth='+el.scrollWidth+', clientWidth='+el.clientWidth+', currently scrollable='+(el.scrollWidth>el.clientWidth));
   }, {passive:true});
   el.addEventListener('touchmove', e=>{
     if(!dragging||e.touches.length!==1) return;
+    moveCount++;
     const dx=e.touches[0].clientX-startX;
     const dy=e.touches[0].clientY-startY;
     if(lockedDir===null && (Math.abs(dx)>4||Math.abs(dy)>4)){
@@ -1000,9 +1004,15 @@ function enableManualTouchScroll(el){
     if(lockedDir==='x'){
       if(e.cancelable) e.preventDefault();
       el.scrollLeft = startScrollLeft - dx;
+      setDbg('touchmove #'+moveCount+', dx='+Math.round(dx)+', setting scrollLeft to '+Math.round(startScrollLeft-dx)+', actual scrollLeft now='+el.scrollLeft);
+    } else {
+      setDbg('touchmove #'+moveCount+' — locked direction is "'+lockedDir+'" (vertical), not scrolling table');
     }
   }, {passive:false});
-  el.addEventListener('touchend', ()=>{dragging=false;lockedDir=null;}, {passive:true});
+  el.addEventListener('touchend', ()=>{
+    setDbg('touchend — final scrollLeft='+el.scrollLeft+' (idle, waiting for next touch)');
+    dragging=false;lockedDir=null;
+  }, {passive:true});
   el.addEventListener('touchcancel', ()=>{dragging=false;lockedDir=null;}, {passive:true});
 }
 
@@ -1018,6 +1028,7 @@ function renderProductsInto(c){
         <button class="btn primary" onclick="saveCurrentProject();goStep(2);">Review →</button>
       </div>
     </div>
+    <div id="touch-debug" style="font-size:11px;padding:6px 10px;background:#fff3cd;color:#856404;border-radius:6px;margin-bottom:8px;font-family:monospace;">Touch debug: waiting for a touch on the table below…</div>
     <div class="tbl-wrap"><div id="prod-scroll-container" style="overflow-x:auto;">
       <table class="tbl"><thead><tr>
         <th style="width:24px" class="mobile-hide"></th>
