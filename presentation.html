@@ -18,6 +18,11 @@
   .panel{ width:400px; flex:0 0 400px; background:#faf7f1; border-right:1px solid var(--hair);
     height:100vh; overflow-y:auto; position:sticky; top:0; }
   .stage{ flex:1; overflow-x:auto; padding:24px; }
+  @media(max-width:900px){
+    .app{ flex-direction:column!important; }
+    .panel{ width:100%!important; flex:none!important; height:auto!important; max-height:70vh; position:static!important; border-right:none; border-bottom:1px solid var(--hair); }
+    .stage{ padding:12px; }
+  }
 
   .panel .head{ padding:16px 18px; background:var(--ink); color:#F3EEE7;
     display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:5; }
@@ -641,9 +646,30 @@ zoom.addEventListener("input", applyZoom);
 
 /* ---- init ---- */
 function buildAll(){ buildList("dimList",state.dims,dimCols); buildList("matList",state.materials,matCols); buildList("legList",state.legend,legCols); buildDrawings(); }
+// Direct JS fallback for the mobile panel/preview stacking, alongside
+// the CSS media query above. A CSS @media rule was found to sometimes
+// not apply on a real device even when its own condition tested true in
+// JavaScript — so this sets the same mobile layout directly via inline
+// styles too, which always take effect regardless of any CSS engine
+// inconsistency.
+function forceMobileAppLayoutIfNeeded(){
+  const isMobile = window.matchMedia('(max-width:900px)').matches || window.matchMedia('(hover:none) and (pointer:coarse)').matches;
+  if(!isMobile) return;
+  const appEl = document.querySelector('.app');
+  const panelEl = document.querySelector('.panel');
+  if(appEl) appEl.style.flexDirection = 'column';
+  if(panelEl){
+    panelEl.style.width = '100%';
+    panelEl.style.flex = 'none';
+    panelEl.style.height = 'auto';
+    panelEl.style.maxHeight = '70vh';
+    panelEl.style.position = 'static';
+  }
+}
 bindSimple(); buildAll(); render();
 applyZoom();
 updateLastRefInfo();
+forceMobileAppLayoutIfNeeded();
 </script>
 </body>
 </html>
