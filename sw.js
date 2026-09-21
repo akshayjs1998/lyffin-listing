@@ -1,4 +1,4 @@
-const CACHE = 'lyffin-listing-v1789980514';
+const CACHE = 'lyffin-listing-v1789980925';
 const FILES = [
   '/lyffin-listing/index.html',
   '/lyffin-listing/presentation.html',

@@ -1090,7 +1090,49 @@ function renderProductsInto(c){
   </div>
 </div>`;
   renderTableRows();
+// Direct JS fallback for the mobile layout switch. On at least one real
+// device, window.matchMedia() in JavaScript reliably reports true for
+// these conditions, yet the equivalent CSS @media rule targeting the
+// same element was not actually being applied by the browser's own CSS
+// engine — an inconsistency between the two that doesn't have a full
+// explanation, but doesn't need one to work around: matchMedia() has
+// proven itself reliable here, so this sets the mobile layout directly
+// via inline styles (which always win, with no cascade or media-query
+// parsing involved at all) whenever it reports true, rather than
+// continuing to depend on the CSS engine for this specific decision.
+function forceMobileLayoutIfNeeded(){
+  const isMobile = window.matchMedia('(max-width:900px)').matches || window.matchMedia('(hover:none) and (pointer:coarse)').matches;
+  if(!isMobile) return;
+  const layout = document.getElementById('products-layout');
+  if(layout){
+    layout.style.display='flex';
+    layout.style.flexDirection='column';
+    layout.style.gap='14px';
+    layout.style.width='100%';
+    layout.style.maxWidth='100%';
+    layout.style.minWidth='0';
+    Array.from(layout.children).forEach(child=>{
+      child.style.width='100%';
+      child.style.maxWidth='100%';
+      child.style.minWidth='0';
+    });
+  }
+  const scrollContainer = document.getElementById('prod-scroll-container');
+  if(scrollContainer){
+    scrollContainer.style.width='100%';
+    scrollContainer.style.maxWidth='100%';
+    scrollContainer.style.minWidth='0';
+    scrollContainer.style.overflowX='auto';
+    const table = scrollContainer.querySelector('.tbl');
+    if(table){
+      table.style.minWidth='840px';
+      table.style.width='auto';
+    }
+  }
+}
+
   enableManualTouchScroll(document.getElementById('prod-scroll-container'));
+  forceMobileLayoutIfNeeded();
   if(selectedId)renderDetail();
 }
 
